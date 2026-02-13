@@ -7,83 +7,19 @@
 #include "host/util/util.h"
 #include "console/console.h"
 #include "services/gap/ble_svc_gap.h"
-#include "periodic_sync.h"
 #include "host/ble_gap.h"
 #include <stdbool.h>
 #include <string.h>
 
 #include "psa/crypto.h"
 
-#define PROTOCOL_HEADER_MIN_SIZE 4
-
-typedef struct {
-    uint16_t company_id;
-    uint8_t version_mode;
-    uint8_t flags;
-    uint8_t *public_key;
-    size_t pubkey_len;
-} mfg_data_t;
-
+#include "disc.h"
 
 static const char* tag = "BLE_SCAN_APP"; 
 
 void ble_store_config_init(void);
 
 //BLE_HS_ADV_TYPE_MFG_DATA
-
-static int gap_event_cb(struct ble_gap_event *event, void *arg)
-{
-	printf("Event Type: %d\n", event->type);
-	if (event->type != 19)
-	{
-		printf("Event type NOT Extended Discovery");
-	}
-	
-	switch(event->type)
-	{
-		case BLE_GAP_EVENT_EXT_DISC: {
-			struct ble_gap_ext_disc_desc *disc = ((struct ble_gap_ext_disc_desc *)(&event->ext_disc));
-			
-			uint8_t data_len = disc->length_data;
-			if (data_len >= 32)
-			{
-				ESP_LOGI(tag, "ADV Packet Length: %d\n", data_len);
-				
-			}
-			break;
-		}
-	}
-	
-	return 0;
-}
-
-void start_scan(void)
-{
-	struct ble_gap_disc_params params;
-	uint8_t own_addr_type;
-	int rc;
-	
-	memset(&params, 0, sizeof(params));
-	
-	rc = ble_hs_id_infer_auto(0, &own_addr_type);
-	if (rc != 0)
-	{
-		ESP_LOGE(tag, "Could not infer address type");
-		return;
-	}
-	
-	params.filter_duplicates = 1;
-	params.passive = 1;
-	
-	rc = ble_gap_disc(own_addr_type, BLE_HS_FOREVER, &params, gap_event_cb, NULL);
-	if (rc != 0)
-	{
-		ESP_LOGE(tag, "Failed to start discovery rc=%d\n", rc);
-		return;
-	}
-	
-	printf("Started Discovery\n");
-}
 
 void scan_on_reset(int reason)
 {
@@ -99,9 +35,14 @@ void scan_on_sync(void)
 	{
 		ESP_LOGE(tag, "No valid Address available. rc=%d\n", rc);
 	}
+
+	ble_disc_params_t params = {
+		.filter_duplicates = 1,
+		.passive = 1,
+	};
 	
-	ESP_LOGI(tag, "Calling Start Scan");
-	start_scan();
+	ble_status_t status = disc_start(&params, 0);
+	printf("Status: %d\n", status);
 }
 
 void scan_host_task(void* param)
