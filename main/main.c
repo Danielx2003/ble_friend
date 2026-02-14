@@ -14,6 +14,7 @@
 #include "psa/crypto.h"
 
 #include "disc.h"
+#include "ble.h"
 
 static const char* tag = "BLE_SCAN_APP"; 
 
@@ -21,20 +22,14 @@ void ble_store_config_init(void);
 
 //BLE_HS_ADV_TYPE_MFG_DATA
 
-void scan_on_reset(int reason)
+void on_reset(ble_event_reset_t* reset)
 {
-	
+	printf("Reset Reason: %d", reset->reason);
 }
 
-void scan_on_sync(void)
+void on_sync(void)
 {
 	ESP_LOGI(tag, "Host has Synced");
-	int rc;
-	rc = ble_hs_util_ensure_addr(0);
-	if (rc != 0)
-	{
-		ESP_LOGE(tag, "No valid Address available. rc=%d\n", rc);
-	}
 
 	ble_disc_params_t params = {
 		.filter_duplicates = 1,
@@ -56,26 +51,13 @@ void scan_host_task(void* param)
 
 void app_main(void)
 {
-	int rc;
-	/* Initialize NVS — it is used to store PHY calibration data */
-	esp_err_t ret = nvs_flash_init();
-	if  (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-	    ESP_ERROR_CHECK(nvs_flash_erase());
-	    ret = nvs_flash_init();
-	}
-	ESP_ERROR_CHECK(ret);
+	device_init();
 
-	ret = nimble_port_init();
-	if (ret != ESP_OK) {
-	    MODLOG_DFLT(ERROR, "Failed to init nimble %d \n", ret);
-	    return;
-	}
-
-	/* Configure the host. */
-	ble_hs_cfg.reset_cb = scan_on_reset;
-	ble_hs_cfg.sync_cb = scan_on_sync;
-	ble_hs_cfg.store_status_cb = ble_store_util_status_rr;
+	ble_callbacks_t callbacks = {
+	    .on_ready = on_sync,
+	    .on_reset = on_reset
+	};
 	
-	ble_store_config_init();
-	nimble_port_freertos_init(scan_host_task);
+	ble_init(&callbacks);
+	ble_start();
 }
