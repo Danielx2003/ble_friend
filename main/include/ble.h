@@ -1,7 +1,5 @@
 #pragma once
 
-#include <stdint.h>
-
 typedef struct {
 	int reason;
 } ble_event_reset_t;
@@ -13,4 +11,3 @@ typedef struct {
 
 int ble_init(const ble_callbacks_t* cbs);
 int ble_start(void);
-void device_init(void);
