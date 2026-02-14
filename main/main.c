@@ -2,6 +2,7 @@
 
 #include "disc.h"
 #include "ble.h"
+#include "device.h"
 
 #include <stdbool.h>
 
