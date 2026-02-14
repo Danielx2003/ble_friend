@@ -1,15 +1,9 @@
 #include "ble.h"
 
-#include "esp_log.h"
-#include "nvs_flash.h"
-/* BLE */
 #include "nimble/nimble_port.h"
 #include "nimble/nimble_port_freertos.h"
 #include "host/ble_hs.h"
-#include "host/util/util.h"
-#include "console/console.h"
-#include "services/gap/ble_svc_gap.h"
-#include "host/ble_gap.h"
+
 #include <stdbool.h>
 #include <string.h>
 
@@ -65,15 +59,4 @@ int ble_start(void)
 {
     nimble_port_freertos_init(ble_host_task);
     return 0;
-}
-
-void device_init()
-{
-	/* Initialize NVS — it is used to store PHY calibration data */
-	esp_err_t ret = nvs_flash_init();
-	if  (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-	    ESP_ERROR_CHECK(nvs_flash_erase());
-	    ret = nvs_flash_init();
-	}
-	ESP_ERROR_CHECK(ret);
 }
