@@ -6,29 +6,6 @@
 #include <string.h>
 #include <stddef.h>
 
-struct byte_data 
-{
-  uint16_t company_id;
-};
-
-parser_status_t parse(parser_msg_t type, uint8_t* data)
-{
-  struct byte_data d;
-  memset(&d, 0, sizeof(d));
-
-  memcpy(&(d.company_id), &data[1], sizeof(d.company_id));  
-  if (d.company_id != 0xFFFF)
-  {
-    printf("Invalid!\n");
-    return PARSER_ERR_COMPANY_ID;
-  }
-
-
-  printf("Comapny Id: %u\n", (unsigned int)d.company_id);
-
-  return PARSER_SUCCESS;
-}
-
 parser_status_t parse_adv_data(const uint8_t* adv_data, size_t adv_data_len)
 {
   parser_status_t status;
@@ -61,14 +38,7 @@ parser_status_t extract_mfg_data(const uint8_t* adv_data, size_t adv_data_len, m
 
       out->company_id = adv_data[i] | (adv_data[i+1] << 8);
       out->version_mode = adv_data[i+2];
-      out->flags = adv_data[i+3];
-
-      
-//      printf("Comapny Id: %u\n", out->company_id);
-//      printf("Version: %u\n", (out->version_mode >> 4));
-//      printf("Mode: %u\n", (out->version_mode) & 0x0F);
-//      printf("Flag: %u\n", out->flags);
-      
+      out->flags = adv_data[i+3];      
 
       return PARSER_SUCCESS;
     }
@@ -83,8 +53,6 @@ parser_status_t parse_mfg_data(mfg_data_t* mfg)
 {
   if (mfg->company_id != COMPANY_ID) { return PARSER_ERR_COMPANY_ID; }
 
-  // if (mfg->version != SUPPORTED_VERSION) { return PARSER_UNSUPPORTED_VERSION; }
-
   return parse_protocol_msg((mfg->version_mode & 0x0F), mfg);
 }
 
@@ -93,9 +61,9 @@ parser_status_t parse_protocol_msg(parser_msg_t type, mfg_data_t* mfg)
   switch(type)
   {
     case PARSER_PAIRING_MSG:
-      return PARSER_SUCCESS;
+      return handle_pairing_msg(mfg);
     case PARSER_PAIRED_MSG:
-      return PARSER_SUCCESS;
+      return handle_paired_msg(mfg);
     case PARSER_LOST_MSG:
       return handle_lost_msg(mfg);
     default:
