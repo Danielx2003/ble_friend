@@ -12,6 +12,7 @@ static const char* tag = "BLE_DISC";
 void ble_handle_lost(void* context, mfg_data_t* mfg);
 void ble_handle_pairing(void* contexnt, mfg_data_t* mfg);
 void ble_handle_paired(void* context, mfg_data_t* mfg);
+int disc_cb(struct ble_gap_event *event, void *arg);
 
 static parser_action_table_t ble_actions = {
     .on_pairing = ble_handle_pairing,
@@ -30,43 +31,38 @@ void ble_handle_lost(void* context, mfg_data_t* mfg)
 
 void ble_handle_pairing(void* context, mfg_data_t* mfg)
 {
+	int rc;
+	
 	printf("\n\nHanlde Pairing Msg\n\n");
 	struct ble_gap_event* event = (struct ble_gap_event*)context;
 	
-//	struct ble_gap_conn_params params;
-//	memset(&params, 0, sizeof(params));
-//	
-	printf("Expected: %d. Actual: %d\n", event->ext_disc.length_data, mfg->payload_len);
-//	
-//	for (int i=0; i<event->ext_disc.length_data; i++)
-//	{
-//		printf("%02x:", event->ext_disc.data[i]);
-//	}
-//	
-//	printf("----\n\n");
-//	
-	for (int i=0; i<mfg->payload_len; i++)
-	{
-		printf("%02x:", mfg->payload[i]);
-	}
-	
-	printf("----\n\n");
+	rc = ble_gap_disc_cancel();
+	if (rc != 0) { printf("Failed to cancel\n"); return; }
+	printf("Cancelled! rc=%d\n", rc);
 
+	rc = ble_hs_id_infer_auto(0, &own_addr_type);
+	if (rc != 0) { return; }
 
-//	int rc= ble_gap_connect(
-//		own_addr_type, 
-//		&(event->ext_disc.addr),
-//		0,
-//		&params,
-//		NULL, NULL);
-//	
-//	printf("Tried to connect to device: Rc=%d", rc);
+ rc = ble_gap_connect(
+		own_addr_type, 
+		&(event->ext_disc.addr),
+		30000,
+		NULL,
+		disc_cb, NULL);
+		
+	printf("Tried to connect to device: Rc=%d\n", rc);
 }
 
 void ble_handle_paired(void* context, mfg_data_t* mfg)
 {
 	struct ble_gap_event* event = (struct ble_gap_event*)context;
 	printf("Event Type: %d\n", event->type);
+}
+
+int connect_cb(struct ble_gap_event *event, void *arg)
+{
+	printf("Type: %d\n", event->type);
+	return 0;
 }
 
 int disc_cb(struct ble_gap_event *event, void *arg)
@@ -78,23 +74,25 @@ int disc_cb(struct ble_gap_event *event, void *arg)
 	
 	result.mfg = &mfg;
 	
-//	memset(&result, 0, sizeof(result));
-//	memset(result.mfg, 0, sizeof(*result.mfg));
-//	result.mfg->payload_len = 0;
-	
 	switch(event->type)
 	{
 		case BLE_GAP_EVENT_DISC_COMPLETE:
-			printf("Connection Complete?\n");
+			printf("Discovery Complete?\n");			
 			break;
-
+		case BLE_GAP_EVENT_DISCONNECT:
+			printf("Disconnected\n");
+			break;
+		case BLE_GAP_EVENT_CONNECT:
+			printf("Connected!\n");
+			printf("Connection Handle: %d Status: %d\n", event->connect.conn_handle, event->connect.status);
+			break;
 		default:
 			break;
 	}
 	
 	status = parse_adv_data(event->ext_disc.data, event->ext_disc.length_data, &result);
 	if (status != PARSER_SUCCESS) { return status; }
-	
+
 	result.action(event, result.mfg);
 	
 	return 0;
