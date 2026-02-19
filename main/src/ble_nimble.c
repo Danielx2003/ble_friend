@@ -3,6 +3,9 @@
 #include "nimble/nimble_port.h"
 #include "nimble/nimble_port_freertos.h"
 #include "host/ble_hs.h"
+#include "host/ble_hs.h"
+#include "host/ble_gap.h"
+#include "esp_central.h"
 
 #include <stdbool.h>
 #include <string.h>
@@ -43,6 +46,9 @@ int ble_init(const ble_callbacks_t* callbacks)
   ble_hs_cfg.reset_cb = nimble_on_reset;
   ble_hs_cfg.sync_cb  = nimble_on_sync;
   ble_hs_cfg.store_status_cb = ble_store_util_status_rr;
+
+	peer_init(4, 64, 64, 64);
+	ble_att_set_preferred_mtu(256);
 
   ble_store_config_init();
 
