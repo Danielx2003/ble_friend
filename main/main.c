@@ -24,7 +24,6 @@ void on_disconnect(void *ctx)
 
 void on_ext_disc(void* ctx)
 {
-	printf("handle_ext_disc\n");
 	ble_status_t status = handle_ext_disc(ctx);
 }
 
