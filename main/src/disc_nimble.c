@@ -6,6 +6,8 @@
 #include "esp_log.h"
 #include "esp_central.h"
 #include "parser.h"
+#include "crypto.h"
+#include "psa/crypto_values.h"
 
 #include <stdio.h>
 
@@ -117,9 +119,35 @@ int on_read(uint16_t conn_handle,
             struct ble_gatt_attr *attr,
             void *arg)
 {
-  printf("Char Read: %.*s\n",
-         attr->om->om_len,
-         (char *)attr->om->om_data);
+  const ble_uuid_any_t *uuid = (const ble_uuid_any_t *)arg;
+	psa_key_id_t secret_key;
+
+  if (error->status != 0)
+  {
+    ESP_LOGE(tag, "Read failed status=%d", error->status);
+    return 0;
+  }
+
+  if (ble_uuid_cmp(&uuid->u, &gatt_svr_chr_uuid.u) == 0)
+  {
+		psa_status_t status = generate_shared_secret_raw_bytes(
+			NULL,
+			attr->om->om_data,
+			attr->om->om_len,
+			256,
+			&secret_key
+		);
+
+		if (status != PSA_SUCCESS) {
+			ESP_LOGE(tag, "Failed to generate secret. status=%d",status);
+		} else {
+			printf("SUccessfully generated secret key!\n");
+		}
+  }
+  else
+  {
+    ESP_LOGW(tag, "Unknown characteristic read");
+  }
 
   return 0;
 }
@@ -157,7 +185,7 @@ void on_disc_complete(const struct peer *peer,
   rc = ble_gattc_read(peer->conn_handle,
                       chr->chr.val_handle,
                       on_read,
-                      NULL);
+                     (void* )(&chr->chr.uuid));
 
   if (rc != 0)
   {
