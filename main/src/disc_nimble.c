@@ -11,6 +11,8 @@
 
 #include <stdio.h>
 
+/* Static Variables */
+
 static const char *tag = "BLE_DISC";
 
 void ble_handle_lost(void *context, mfg_data_t *mfg);
@@ -22,15 +24,10 @@ static const ble_uuid128_t key_exchange_svr_uuid = BLE_UUID128_INIT(PUB_KEY_SERV
 static const ble_uuid128_t pub_key_chr_uuid = BLE_UUID128_INIT(PUB_KEY_CHAR_UUID);
 static const ble_uuid128_t peer_pub_key_chr_uuid = BLE_UUID128_INIT(PEER_PUB_KEY_CHAR_WRITE_UUID);
 
-
-static parser_action_table_t ble_actions = {
-  .on_pairing = ble_handle_pairing,
-  .on_paired = ble_handle_paired,
-  .on_lost = ble_handle_lost
-};
-
 static ble_event_cbs_t ble_event_cbs;
 static uint8_t own_addr_type;
+
+/* Event Dispatcher */
 
 void ble_dispatch_event(ble_event_t ble_event,
                         struct ble_gap_event *event)
@@ -63,55 +60,7 @@ void ble_dispatch_event(ble_event_t ble_event,
   }
 }
 
-void ble_handle_lost(void *context, mfg_data_t *mfg)
-{
-  struct ble_gap_event *event =
-      (struct ble_gap_event *)context;
-}
-
-void ble_handle_pairing(void *context, mfg_data_t *mfg)
-{
-  int rc;
-  struct ble_gap_event *event =
-    (struct ble_gap_event *)context;
-
-  rc = ble_gap_disc_cancel();
-  if (rc != 0)
-  {
-    ESP_LOGE(tag, "Failed to cancel discovery rc=%d", rc);
-    return;
-  }
-
-  rc = ble_hs_id_infer_auto(0, &own_addr_type);
-  if (rc != 0)
-  {
-    ESP_LOGE(tag, "Failed to infer address type rc=%d", rc);
-    return;
-  }
-
-  rc = ble_gap_connect(
-    own_addr_type,
-    &(event->ext_disc.addr),
-    30000,
-    NULL,
-    disc_cb,
-    NULL);
-
-  ESP_LOGI(tag, "Attempted connection rc=%d", rc);
-}
-
-void ble_handle_paired(void *context, mfg_data_t *mfg)
-{
-  struct ble_gap_event *event =
-    (struct ble_gap_event *)context;
-}
-
-int connect_cb(struct ble_gap_event *event, void *arg)
-{
-  ESP_LOGI(tag, "Connect callback event type=%d",
-           event->type);
-  return 0;
-}
+/* Callbacks */
 
 int on_read(uint16_t conn_handle,
             const struct ble_gatt_error *error,
@@ -241,6 +190,32 @@ void on_disc_complete(const struct peer *peer,
   }
 }
 
+int disc_cb(struct ble_gap_event *event, void *arg)
+{
+  switch (event->type)
+  {
+    case BLE_GAP_EVENT_DISCONNECT:
+      ble_dispatch_event(BLE_DISCONNECT_EVENT, event);
+      break;
+
+    case BLE_GAP_EVENT_CONNECT:
+      if (event->connect.status == 0)
+        ble_dispatch_event(BLE_CONNECT_EVENT, event);
+      break;
+
+    case BLE_GAP_EVENT_EXT_DISC:
+      ble_dispatch_event(BLE_EXT_DISC_EVENT, event);
+      break;
+
+    default:
+      break;
+  }
+
+  return 0;
+}
+
+/* Public API */
+
 ble_status_t handle_new_connection(void *ctx)
 {
   int rc;
@@ -299,30 +274,6 @@ ble_status_t handle_ext_disc(void *ctx)
   return BLE_SUCCESS;
 }
 
-int disc_cb(struct ble_gap_event *event, void *arg)
-{
-  switch (event->type)
-  {
-    case BLE_GAP_EVENT_DISCONNECT:
-      ble_dispatch_event(BLE_DISCONNECT_EVENT, event);
-      break;
-
-    case BLE_GAP_EVENT_CONNECT:
-      if (event->connect.status == 0)
-        ble_dispatch_event(BLE_CONNECT_EVENT, event);
-      break;
-
-    case BLE_GAP_EVENT_EXT_DISC:
-      ble_dispatch_event(BLE_EXT_DISC_EVENT, event);
-      break;
-
-    default:
-      break;
-  }
-
-  return 0;
-}
-
 ble_status_t disc_set_event_handlers(ble_event_cbs_t *cbs)
 {
   ble_event_cbs.on_connect = cbs->on_connect;
@@ -336,8 +287,6 @@ ble_status_t disc_start(ble_disc_params_t *params,
                         uint32_t duration)
 {
   int rc;
-
-  parser_init(&ble_actions);
 
   rc = ble_hs_util_ensure_addr(0);
   if (rc != 0)
@@ -384,3 +333,42 @@ ble_status_t disc_start(ble_disc_params_t *params,
 
   return BLE_SUCCESS;
 }
+
+ble_status_t start_connect(void* context)
+{
+	struct ble_gap_event *event =
+	  (struct ble_gap_event *)context;
+
+	int rc;
+	rc = ble_hs_id_infer_auto(0, &own_addr_type);
+	if (rc != 0)
+	{
+	  ESP_LOGE(tag, "Failed to infer address type rc=%d", rc);
+	  return -1;
+	}
+
+	rc = ble_gap_connect(
+	  own_addr_type,
+	  &(event->ext_disc.addr),
+	  30000,
+	  NULL,
+	  disc_cb,
+	  NULL);
+
+	ESP_LOGI(tag, "Attempted connection rc=%d", rc);
+
+	return BLE_SUCCESS;
+}
+
+ble_status_t disc_stop()
+{
+	int rc = ble_gap_disc_cancel();
+	if (rc != 0)
+	{
+	  ESP_LOGE(tag, "Failed to cancel discovery rc=%d", rc);
+	  return -1;
+	}
+
+	return BLE_SUCCESS;
+}
+
