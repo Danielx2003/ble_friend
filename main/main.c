@@ -3,12 +3,29 @@
 #include "disc.h"
 #include "ble.h"
 #include "device.h"
+#include "parser.h"
 
 #include <stdbool.h>
 
+/* Static Variables */
+
 static const char *tag = "BLE_SCAN_APP";
 
+void on_pairing_msg(void *ctx, mfg_data_t *mfg);
+void on_lost_msg(void *ctx, mfg_data_t *mfg);
+void on_paired_msg(void *ctx, mfg_data_t *mfg);
+
+static parser_action_table_t ble_actions = {
+  .on_pairing = on_pairing_msg,
+  .on_paired = on_paired_msg,
+  .on_lost = on_lost_msg
+};
+
+/* Function Definitions */
+
 void ble_store_config_init(void);
+
+/* Callbacks */
 
 void on_connect(void *ctx)
 {
@@ -20,6 +37,22 @@ void on_connect(void *ctx)
 void on_disconnect(void *ctx)
 {
   ESP_LOGI(tag, "Disconnected");
+}
+
+void on_pairing_msg(void *ctx, mfg_data_t *mfg)
+{
+	disc_stop();
+	start_connect(ctx);
+}
+
+void on_lost_msg(void *ctx, mfg_data_t *mfg)
+{
+	printf("lost msg receiev\n");
+}
+
+void on_paired_msg(void *ctx, mfg_data_t *mfg)
+{
+	printf("paired msg receiev\n");
 }
 
 void on_ext_disc(void* ctx)
@@ -42,7 +75,7 @@ void on_sync(void)
   ble_event_cbs_t event_cbs = {
     .on_connect = on_connect,
     .on_disconnect = on_disconnect,
-		.on_ext_disc = on_ext_disc
+		.on_ext_disc = on_ext_disc,
   };
 
   disc_set_event_handlers(&event_cbs);
@@ -56,6 +89,8 @@ void on_sync(void)
   }
 }
 
+/* Main */
+
 void app_main(void)
 {
   device_init();
@@ -64,6 +99,8 @@ void app_main(void)
     .on_ready = on_sync,
     .on_reset = on_reset
   };
+
+	parser_init(&ble_actions);
 
   ble_init(&callbacks);
   ble_start();
