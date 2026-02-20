@@ -23,21 +23,21 @@ void ble_store_config_init(void);
 
 static void nimble_on_reset(int reason)
 {
-    if (app_callbacks.on_reset)
-		{
-			ble_event_reset_t reset;
-			memset(&reset, 0, sizeof(reset));
-			reset.reason = reason;
+  if (app_callbacks.on_reset)
+	{
+		ble_event_reset_t reset;
+		memset(&reset, 0, sizeof(reset));
+		reset.reason = reason;
 
-      app_callbacks.on_reset(&reset);
-    }
+    app_callbacks.on_reset(&reset);
+  }
 }
 
 static void nimble_on_sync(void)
 {
-    if (app_callbacks.on_ready) {
-        app_callbacks.on_ready();
-    }
+  if (app_callbacks.on_ready) {
+      app_callbacks.on_ready();
+  }
 }
 
 /* Private Functions */
