@@ -10,18 +10,26 @@
 #include <stdbool.h>
 #include <string.h>
 
+/* Static Variables */
+
 static ble_callbacks_t app_callbacks;
+
+/* Function Definitions */
+
 void ble_store_config_init(void);
+
+
+/* Callbacks */
 
 static void nimble_on_reset(int reason)
 {
-    if (app_callbacks.on_reset) {
-		
-		ble_event_reset_t reset;
-		memset(&reset, 0, sizeof(reset));
-		reset.reason = reason;
-		
-        app_callbacks.on_reset(&reset);
+    if (app_callbacks.on_reset)
+		{
+			ble_event_reset_t reset;
+			memset(&reset, 0, sizeof(reset));
+			reset.reason = reason;
+
+      app_callbacks.on_reset(&reset);
     }
 }
 
@@ -31,6 +39,17 @@ static void nimble_on_sync(void)
         app_callbacks.on_ready();
     }
 }
+
+/* Private Functions */
+
+void ble_host_task(void* param)
+{
+  nimble_port_run();
+  nimble_port_freertos_deinit();
+}
+
+
+/* Public API */
 
 int ble_init(const ble_callbacks_t* callbacks)
 {
@@ -54,13 +73,6 @@ int ble_init(const ble_callbacks_t* callbacks)
 
   return 0;
 }
-
-void ble_host_task(void* param)
-{
-  nimble_port_run();
-  nimble_port_freertos_deinit();
-}
-
 int ble_start(void)
 {
     nimble_port_freertos_init(ble_host_task);
