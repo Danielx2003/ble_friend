@@ -6,6 +6,9 @@
 #include "parser.h"
 
 #include <stdbool.h>
+#include <stdio.h>
+
+/* Static Variables */
 
 /* Static Variables */
 

@@ -17,17 +17,17 @@ psa_status_t generate_keypair(
    
   switch (curve) {
     case CRYPTO_CURVE_X25519:
-        psa_set_key_type(&attr, PSA_KEY_TYPE_ECC_KEY_PAIR(PSA_ECC_FAMILY_MONTGOMERY));
-        psa_set_key_bits(&attr, X25519_KEY_BITS);
-        break;
+      psa_set_key_type(&attr, PSA_KEY_TYPE_ECC_KEY_PAIR(PSA_ECC_FAMILY_MONTGOMERY));
+      psa_set_key_bits(&attr, X25519_KEY_BITS);
+      break;
 
     case CRYPTO_CURVE_P256:
-        psa_set_key_type(&attr, PSA_KEY_TYPE_ECC_KEY_PAIR(PSA_ECC_FAMILY_SECP_R1));
-        psa_set_key_bits(&attr, P256_KEY_BITS);
-        break;
+      psa_set_key_type(&attr, PSA_KEY_TYPE_ECC_KEY_PAIR(PSA_ECC_FAMILY_SECP_R1));
+      psa_set_key_bits(&attr, P256_KEY_BITS);
+      break;
 
     default:
-        return PSA_ERROR_INVALID_ARGUMENT;
+      return PSA_ERROR_INVALID_ARGUMENT;
   }
 
   psa_set_key_usage_flags(&attr,
