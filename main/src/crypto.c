@@ -49,10 +49,10 @@ psa_status_t generate_secret(
   )
 {
   psa_status_t status;
-	
+
 	uint8_t peer_pub_key[PSA_EXPORT_PUBLIC_KEY_MAX_SIZE];
 	size_t peer_pub_key_len = 0;	
-	
+
 	status = psa_export_public_key(
 		*peer_key,
 		peer_pub_key,
@@ -60,8 +60,8 @@ psa_status_t generate_secret(
 		&peer_pub_key_len
 	);
 
-		memset(&raw_secret[0], 0, 32);
-	
+	memset(&raw_secret[0], 0, 32);
+
 	size_t output_len;
 
 	status = psa_raw_key_agreement(
@@ -69,6 +69,33 @@ psa_status_t generate_secret(
 		*priv_key,
 		peer_pub_key,
 		peer_pub_key_len,
+		raw_secret,
+		32,
+		&output_len
+	);
+
+  if (status != PSA_SUCCESS) { return status; }
+
+	return status;
+}
+
+psa_status_t generate_secret_raw_bytes(
+  psa_key_id_t *priv_key,
+  uint8_t peer_key[32],
+	uint8_t raw_secret[32]
+  )
+{
+  psa_status_t status;
+
+	memset(&raw_secret[0], 0, 32);
+
+	size_t output_len;
+
+	status = psa_raw_key_agreement(
+		PSA_ALG_ECDH,
+		*priv_key,
+		peer_key,
+		32,
 		raw_secret,
 		32,
 		&output_len
