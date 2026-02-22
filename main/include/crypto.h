@@ -36,11 +36,10 @@ psa_status_t generate_keypair(
 psa_status_t generate_secret(
     psa_key_id_t* private_key_id,
     psa_key_id_t* peer_key_id,
-    size_t secret_key_bits,
-    psa_key_id_t* secret_key_id_out
+		uint8_t raw_secret[32]
     );
-		
-		
+
+
 psa_status_t generate_shared_secret_raw_bytes(
     psa_key_id_t* private_key_id,
     uint8_t* peer_key,
@@ -48,3 +47,10 @@ psa_status_t generate_shared_secret_raw_bytes(
     size_t secret_key_bits,
     psa_key_id_t* secret_key_id_out
     );
+
+
+psa_status_t derive_public_key(
+	uint8_t master_secret[32],
+	uint8_t ephemeral_pub_key[PSA_EXPORT_PUBLIC_KEY_MAX_SIZE],
+	size_t *ephemeral_pub_key_size
+);
