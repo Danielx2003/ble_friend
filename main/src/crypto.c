@@ -6,12 +6,30 @@
 #include <stdio.h>
 #include <string.h>
 
-static uint8_t counter = 0;
+static uint8_t counter = 1;
 
-psa_status_t generate_keypair(
-    crypto_curve_t curve,
-    psa_key_id_t* keypair_out
-    )
+struct crypto_key {
+	psa_key_id_t id;
+};
+
+crypto_status_t psa_status_to_crypto(psa_status_t status)
+{
+	switch (status)
+	{
+		case PSA_ERROR_INVALID_ARGUMENT:
+			return CRYPTO_ERR_INVALID_ARGS;
+		case PSA_SUCCESS:
+			printf("returning crypot success\n");
+			return CRYPTO_SUCCESS;
+	}
+	
+	return CRYPTO_SUCCESS;
+}
+
+crypto_status_t generate_keypair(
+  crypto_curve_t curve,
+  crypto_key_id_t *keypair_out
+  )
 {
   psa_key_attributes_t attr = PSA_KEY_ATTRIBUTES_INIT;
   psa_status_t status;
@@ -28,19 +46,23 @@ psa_status_t generate_keypair(
       break;
 
     default:
-      return PSA_ERROR_INVALID_ARGUMENT;
+      return psa_status_to_crypto(PSA_ERROR_INVALID_ARGUMENT);
   }
 
   psa_set_key_usage_flags(&attr,
      PSA_KEY_USAGE_DERIVE
   );
   psa_set_key_algorithm(&attr, PSA_ALG_ECDH);
+	
 
-  status = psa_generate_key(&attr, keypair_out);
+  status = psa_generate_key(&attr, &(keypair_out->id));
   if (status != PSA_SUCCESS) return status;
 
-  return PSA_SUCCESS; 
+	return CRYPTO_SUCCESS;
+//  return psa_status_to_crypto(PSA_SUCCESS); 
 }
+
+/*
 
 psa_status_t generate_secret(
   psa_key_id_t *priv_key,
@@ -187,3 +209,5 @@ psa_status_t derive_public_key(uint8_t master_secret[32], uint8_t ephemeral_pub_
 
  	return status;
 }
+
+*/
