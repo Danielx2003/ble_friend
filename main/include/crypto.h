@@ -55,12 +55,14 @@ typedef enum {
 
 /* Wrapper Implementation */
 
+#define CRYPTO_BACKEND_KEY_HANDLE psa_key_id_t
+
 typedef enum {
 	CRYPTO_SUCCESS,
 	CRYPTO_ERR_INVALID_ARGS
 } crypto_status_t;
 
-typedef struct crypto_key crypto_key_id_t;
+typedef CRYPTO_BACKEND_KEY_HANDLE crypto_key_handle_t;
 
 typedef enum {
   KEY_TYPE_ID,
@@ -68,15 +70,16 @@ typedef enum {
 } key_type_t;
 
 typedef struct {
-  key_type_t type;
-  union {
-    crypto_key_id_t *key;
-    struct {
-      const uint8_t *data;
-      size_t len;
-    } raw;
+	key_type_t type;
+	union {
+	  crypto_key_handle_t id;
+	  struct {
+	    uint8_t *data;
+	    size_t len;
+	  } raw;
 	};
 } crypto_key_t;
+
 
 /**
  * Generate an ECC keypair for the selected curve.
@@ -84,7 +87,14 @@ typedef struct {
  */
 crypto_status_t generate_keypair(
   crypto_curve_t curve,
-	crypto_key_id_t *key
+	crypto_key_t *key
+);
+
+crypto_status_t generate_secret(
+	crypto_key_t *priv_key,
+	crypto_key_t *pub_key,
+	uint8_t *raw_secret,
+	size_t *secret_len
 );
 
 

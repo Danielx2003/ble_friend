@@ -8,9 +8,7 @@
 
 static uint8_t counter = 1;
 
-struct crypto_key {
-	psa_key_id_t id;
-};
+typedef psa_key_id_t crypto_backend_key_handle_t;
 
 crypto_status_t psa_status_to_crypto(psa_status_t status)
 {
@@ -19,7 +17,6 @@ crypto_status_t psa_status_to_crypto(psa_status_t status)
 		case PSA_ERROR_INVALID_ARGUMENT:
 			return CRYPTO_ERR_INVALID_ARGS;
 		case PSA_SUCCESS:
-			printf("returning crypot success\n");
 			return CRYPTO_SUCCESS;
 	}
 	
@@ -28,7 +25,7 @@ crypto_status_t psa_status_to_crypto(psa_status_t status)
 
 crypto_status_t generate_keypair(
   crypto_curve_t curve,
-  crypto_key_id_t *keypair_out
+  crypto_key_t *keypair
   )
 {
   psa_key_attributes_t attr = PSA_KEY_ATTRIBUTES_INIT;
@@ -53,13 +50,75 @@ crypto_status_t generate_keypair(
      PSA_KEY_USAGE_DERIVE
   );
   psa_set_key_algorithm(&attr, PSA_ALG_ECDH);
-	
-
-  status = psa_generate_key(&attr, &(keypair_out->id));
+		
+  status = psa_generate_key(&attr, &(keypair->id));
+	keypair->type = KEY_TYPE_ID;
   if (status != PSA_SUCCESS) return status;
 
+  return psa_status_to_crypto(PSA_SUCCESS); 
+}
+
+crypto_status_t generate_secret(
+	crypto_key_t *priv_key,
+	crypto_key_t *peer_key,
+	uint8_t *raw_secret,
+	size_t *secret_len
+)
+{
+	psa_status_t status;
+	
+	if (priv_key->type == KEY_TYPE_RAW)
+	{
+		// Fill in later - import key
+	}
+	
+	uint8_t peer_pub_key[PSA_EXPORT_PUBLIC_KEY_MAX_SIZE];
+	size_t peer_pub_key_len = 0;	
+	
+	if (peer_key->type == KEY_TYPE_ID)
+	{
+		status = psa_export_public_key(
+			peer_key->id,
+			peer_pub_key,
+			32,
+		&peer_pub_key_len);
+	}
+	else
+	{
+		memcpy(peer_pub_key, peer_key->raw.data, peer_key->raw.len);
+		peer_pub_key_len = peer_key->raw.len;
+	}
+	
+	status = psa_raw_key_agreement(
+		PSA_ALG_ECDH,
+		priv_key->id,
+		peer_pub_key,
+		32,
+		raw_secret,
+		32,
+		secret_len
+	);
+	
+	return psa_status_to_crypto(status);
+	
+//	if (priv_key->type == KEY_TYPE_ID && pub_key->type == KEY_TYPE_ID)
+//	{
+//		
+//	}
+//	else if (priv_key->type == KEY_TYPE_ID && pub_key->type == KEY_TYPE_RAW)
+//	{
+//		
+//	}
+//	else if (priv_key->type == KEY_TYPE_RAW && pub_key->type == KEY_TYPE_ID)
+//	{
+//		
+//	}
+//	else if (priv_key->type == KEY_TYPE_RAW && pub_key->type == KEY_TYPE_RAW)
+//	{
+//		
+//	}
+	
 	return CRYPTO_SUCCESS;
-//  return psa_status_to_crypto(PSA_SUCCESS); 
 }
 
 /*

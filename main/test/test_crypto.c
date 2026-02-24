@@ -10,10 +10,6 @@
 #include <string.h>
 #include <stdlib.h>
 
-struct crypto_key {
-	psa_key_id_t *id;
-};
-
 void setUp(void) {
     psa_status_t status = psa_crypto_init();
 		if (status == PSA_SUCCESS)
@@ -27,9 +23,7 @@ void setUp(void) {
 
 void test_generate_keypair_X25519()
 {
-//  crypto_key_id_t *key = (crypto_key_id_t *)malloc(sizeof(crypto_key_id_t));
-	
-	crypto_key_id_t key;
+	crypto_key_t key;
 
   crypto_status_t status =  generate_keypair(
       CRYPTO_CURVE_X25519,
@@ -41,14 +35,146 @@ void test_generate_keypair_X25519()
 
 void test_generate_keypair_P256()
 { 
-	crypto_key_id_t key;
-
+	crypto_key_t key;
+	
   crypto_status_t status =  generate_keypair(
       CRYPTO_CURVE_P256,
       &key
   );
  
   CU_ASSERT(status == CRYPTO_SUCCESS);
+}
+
+void test_generate_secret_id_id()
+{
+	crypto_key_t priv_key;
+	crypto_key_t pub_key;
+
+	crypto_status_t status =  generate_keypair(
+		CRYPTO_CURVE_X25519,
+		&priv_key
+	 );
+
+	 CU_ASSERT(status == CRYPTO_SUCCESS);
+	 
+	 status =  generate_keypair(
+	 	CRYPTO_CURVE_X25519,
+	 	&pub_key
+	  );
+
+	  CU_ASSERT(status == CRYPTO_SUCCESS);
+	
+	printf("generate secret\n");
+	
+	uint8_t raw_secret[32];
+	size_t raw_secret_len;
+	
+	status = generate_secret(
+		&priv_key,
+		&pub_key,
+		raw_secret,
+		&raw_secret_len
+	);
+	CU_ASSERT(status == CRYPTO_SUCCESS);
+}
+
+void test_generate_secret_raw_id()
+{
+	crypto_key_t priv_key;
+	crypto_key_t pub_key;
+
+	crypto_status_t status =  generate_keypair(
+		CRYPTO_CURVE_X25519,
+		&priv_key
+	 );
+
+	 CU_ASSERT(status == CRYPTO_SUCCESS);
+	 
+	 status =  generate_keypair(
+	 	CRYPTO_CURVE_X25519,
+	 	&pub_key
+	  );
+
+	  CU_ASSERT(status == CRYPTO_SUCCESS);
+	
+	printf("generate secret\n");
+	
+	uint8_t raw_secret[32];
+	size_t raw_secret_len;
+	
+	status = generate_secret(
+		&priv_key,
+		&pub_key,
+		raw_secret,
+		&raw_secret_len
+	);
+	CU_ASSERT(status == CRYPTO_SUCCESS);
+}
+
+void test_generate_secret_id_raw()
+{
+	crypto_key_t priv_key;
+	crypto_key_t pub_key;
+
+	crypto_status_t status =  generate_keypair(
+		CRYPTO_CURVE_X25519,
+		&priv_key
+	 );
+
+	 CU_ASSERT(status == CRYPTO_SUCCESS);
+	 
+	 status =  generate_keypair(
+	 	CRYPTO_CURVE_X25519,
+	 	&pub_key
+	  );
+
+	  CU_ASSERT(status == CRYPTO_SUCCESS);
+	
+	printf("generate secret\n");
+	
+	uint8_t raw_secret[32];
+	size_t raw_secret_len;
+	
+	status = generate_secret(
+		&priv_key,
+		&pub_key,
+		raw_secret,
+		&raw_secret_len
+	);
+	CU_ASSERT(status == CRYPTO_SUCCESS);
+}
+
+void test_generate_secret_raw_raw()
+{
+	crypto_key_t priv_key;
+	crypto_key_t pub_key;
+
+	crypto_status_t status =  generate_keypair(
+		CRYPTO_CURVE_X25519,
+		&priv_key
+	 );
+
+	 CU_ASSERT(status == CRYPTO_SUCCESS);
+	 
+	 status =  generate_keypair(
+	 	CRYPTO_CURVE_X25519,
+	 	&pub_key
+	  );
+
+	  CU_ASSERT(status == CRYPTO_SUCCESS);
+	
+	printf("generate secret\n");
+	
+	uint8_t raw_secret[32];
+	size_t raw_secret_len;
+	
+	status = generate_secret(
+		&priv_key,
+		&pub_key,
+		raw_secret,
+		&raw_secret_len
+	);
+	CU_ASSERT(status == CRYPTO_SUCCESS);
 }
 
 //void test_generate_secret()
@@ -461,7 +587,7 @@ int main()
   CU_add_test(suite, "Generate Keypair Using Curve25519", test_generate_keypair_X25519);
   CU_add_test(suite, "Generate Keypair Using NIST P-256", test_generate_keypair_P256);
 
-//  CU_add_test(suite, "Generate Secret Key", test_generate_secret);
+  CU_add_test(suite, "Generate Secret Key", test_generate_secret_id_id);
 //	CU_add_test(suite, "Generate Secret Invalid Key Fails ", test_generate_secret_invalid_key);
 	
 //	CU_add_test(suite, "Derive Public Key", test_derive_public_key);
