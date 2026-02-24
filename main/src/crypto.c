@@ -5,10 +5,13 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 static uint8_t counter = 1;
 
 typedef psa_key_id_t crypto_backend_key_handle_t;
+
+crypto_status_t convert_from_id_to_raw(crypto_key_t *key);
 
 crypto_status_t psa_status_to_crypto(psa_status_t status)
 {
@@ -18,9 +21,13 @@ crypto_status_t psa_status_to_crypto(psa_status_t status)
 			return CRYPTO_ERR_INVALID_ARGS;
 		case PSA_SUCCESS:
 			return CRYPTO_SUCCESS;
+		case PSA_ERROR_INVALID_HANDLE:
+			return CRYPTO_ERR_INVALID_HANDLE;
+		default:
+			printf("err code: %d\n", status);
+			return CRYPTO_ERR_UNKNOWN;
 	}
-	
-	return CRYPTO_SUCCESS;
+
 }
 
 crypto_status_t generate_keypair(
@@ -50,7 +57,7 @@ crypto_status_t generate_keypair(
      PSA_KEY_USAGE_DERIVE
   );
   psa_set_key_algorithm(&attr, PSA_ALG_ECDH);
-		
+
   status = psa_generate_key(&attr, &(keypair->id));
 	keypair->type = KEY_TYPE_ID;
   if (status != PSA_SUCCESS) return status;
@@ -66,29 +73,31 @@ crypto_status_t generate_secret(
 )
 {
 	psa_status_t status;
-	
+
+	// Private Key should never be raw, as it is not sent over the air
 	if (priv_key->type == KEY_TYPE_RAW)
 	{
-		// Fill in later - import key
+		return CRYPTO_ERR_INVALID_ARGS;
 	}
 	
 	uint8_t peer_pub_key[PSA_EXPORT_PUBLIC_KEY_MAX_SIZE];
 	size_t peer_pub_key_len = 0;	
-	
+
 	if (peer_key->type == KEY_TYPE_ID)
 	{
 		status = psa_export_public_key(
 			peer_key->id,
 			peer_pub_key,
 			32,
-		&peer_pub_key_len);
+		&peer_pub_key_len
+		);
 	}
 	else
 	{
 		memcpy(peer_pub_key, peer_key->raw.data, peer_key->raw.len);
 		peer_pub_key_len = peer_key->raw.len;
 	}
-	
+
 	status = psa_raw_key_agreement(
 		PSA_ALG_ECDH,
 		priv_key->id,
@@ -98,26 +107,58 @@ crypto_status_t generate_secret(
 		32,
 		secret_len
 	);
-	
+
 	return psa_status_to_crypto(status);
+}
+
+crypto_status_t convert_from_id_to_raw(crypto_key_t *key)
+{
+	if (key->type == KEY_TYPE_RAW) { return CRYPTO_ERR_INVALID_ARGS; }
 	
-//	if (priv_key->type == KEY_TYPE_ID && pub_key->type == KEY_TYPE_ID)
-//	{
-//		
-//	}
-//	else if (priv_key->type == KEY_TYPE_ID && pub_key->type == KEY_TYPE_RAW)
-//	{
-//		
-//	}
-//	else if (priv_key->type == KEY_TYPE_RAW && pub_key->type == KEY_TYPE_ID)
-//	{
-//		
-//	}
-//	else if (priv_key->type == KEY_TYPE_RAW && pub_key->type == KEY_TYPE_RAW)
-//	{
-//		
-//	}
-	
+	uint8_t pub_key[PSA_EXPORT_PUBLIC_KEY_MAX_SIZE];
+	size_t pub_key_len = 0;	
+
+	psa_status_t status = psa_export_public_key(
+		key->id,
+		pub_key,
+		32,
+	&pub_key_len
+	);
+	if (status != PSA_SUCCESS) { return psa_status_to_crypto(status); }
+
+	key->type = KEY_TYPE_RAW;
+	memcpy(key->raw.data, pub_key, pub_key_len);
+	key->raw.len = pub_key_len;
+
+	return CRYPTO_SUCCESS;
+}
+
+crypto_status_t convert_from_raw_to_id(crypto_key_t *key)
+{
+	psa_status_t status;
+
+	psa_key_attributes_t attr = PSA_KEY_ATTRIBUTES_INIT;
+	psa_set_key_type(
+		&attr,
+		PSA_KEY_TYPE_ECC_KEY_PAIR(PSA_ECC_FAMILY_MONTGOMERY)
+	);
+	psa_set_key_bits(&attr, 255);
+	psa_set_key_usage_flags(&attr, PSA_KEY_USAGE_DERIVE | PSA_KEY_USAGE_EXPORT);
+	psa_set_key_algorithm(&attr, PSA_ALG_ECDH);
+
+	psa_key_id_t *output_key = (psa_key_id_t *)malloc(sizeof(psa_key_id_t));
+
+	status = psa_import_key(
+		&attr,
+		key->raw.data,
+		key->raw.len,
+		output_key
+	);
+	if (status != PSA_SUCCESS) { return psa_status_to_crypto(status); }
+
+	key->type = KEY_TYPE_ID;
+	key->id = *output_key;
+
 	return CRYPTO_SUCCESS;
 }
 

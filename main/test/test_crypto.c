@@ -64,41 +64,6 @@ void test_generate_secret_id_id()
 
 	  CU_ASSERT(status == CRYPTO_SUCCESS);
 	
-	printf("generate secret\n");
-	
-	uint8_t raw_secret[32];
-	size_t raw_secret_len;
-	
-	status = generate_secret(
-		&priv_key,
-		&pub_key,
-		raw_secret,
-		&raw_secret_len
-	);
-	CU_ASSERT(status == CRYPTO_SUCCESS);
-}
-
-void test_generate_secret_raw_id()
-{
-	crypto_key_t priv_key;
-	crypto_key_t pub_key;
-
-	crypto_status_t status =  generate_keypair(
-		CRYPTO_CURVE_X25519,
-		&priv_key
-	 );
-
-	 CU_ASSERT(status == CRYPTO_SUCCESS);
-	 
-	 status =  generate_keypair(
-	 	CRYPTO_CURVE_X25519,
-	 	&pub_key
-	  );
-
-	  CU_ASSERT(status == CRYPTO_SUCCESS);
-	
-	printf("generate secret\n");
-	
 	uint8_t raw_secret[32];
 	size_t raw_secret_len;
 	
@@ -121,16 +86,14 @@ void test_generate_secret_id_raw()
 		&priv_key
 	 );
 
-	 CU_ASSERT(status == CRYPTO_SUCCESS);
+	CU_ASSERT(status == CRYPTO_SUCCESS);
 	 
-	 status =  generate_keypair(
-	 	CRYPTO_CURVE_X25519,
-	 	&pub_key
-	  );
-
-	  CU_ASSERT(status == CRYPTO_SUCCESS);
+	status =  generate_keypair(
+		CRYPTO_CURVE_X25519,
+		&pub_key
+	);
 	
-	printf("generate secret\n");
+	CU_ASSERT(status == CRYPTO_SUCCESS);
 	
 	uint8_t raw_secret[32];
 	size_t raw_secret_len;
@@ -144,77 +107,51 @@ void test_generate_secret_id_raw()
 	CU_ASSERT(status == CRYPTO_SUCCESS);
 }
 
-void test_generate_secret_raw_raw()
+void test_convert_from_id_to_raw_valid_id_key()
 {
-	crypto_key_t priv_key;
-	crypto_key_t pub_key;
+	crypto_key_t key;
 
 	crypto_status_t status =  generate_keypair(
 		CRYPTO_CURVE_X25519,
-		&priv_key
-	 );
-
-	 CU_ASSERT(status == CRYPTO_SUCCESS);
-	 
-	 status =  generate_keypair(
-	 	CRYPTO_CURVE_X25519,
-	 	&pub_key
-	  );
-
-	  CU_ASSERT(status == CRYPTO_SUCCESS);
-	
-	printf("generate secret\n");
-	
-	uint8_t raw_secret[32];
-	size_t raw_secret_len;
-	
-	status = generate_secret(
-		&priv_key,
-		&pub_key,
-		raw_secret,
-		&raw_secret_len
+		&key
 	);
+
 	CU_ASSERT(status == CRYPTO_SUCCESS);
+	 
+	status = convert_from_id_to_raw(&key);
+	CU_ASSERT(status == CRYPTO_SUCCESS);
+	CU_ASSERT(key.type == KEY_TYPE_RAW);
 }
 
-//void test_generate_secret()
-//{
-//  psa_key_id_t private_key_id;
-//  psa_key_id_t peer_key_id;
-//	uint8_t raw_secret[32];
-//	memset(&raw_secret[0], 0, sizeof(raw_secret));
-//
-//
-//	psa_status_t status = psa_crypto_init();
-//	CU_ASSERT(status == PSA_SUCCESS);
-//
-//  psa_key_attributes_t attr = PSA_KEY_ATTRIBUTES_INIT;
-//  psa_set_key_type(&attr, PSA_KEY_TYPE_ECC_KEY_PAIR(PSA_ECC_FAMILY_MONTGOMERY));
-//  psa_set_key_bits(&attr, 255);
-//  psa_set_key_usage_flags(&attr, PSA_KEY_USAGE_DERIVE);
-//  psa_set_key_algorithm(&attr, PSA_ALG_ECDH);
-//
-//  psa_generate_key(&attr, &private_key_id);
-//  psa_generate_key(&attr, &peer_key_id);
-//	 
-//  psa_status_t res = generate_secret(
-//    &private_key_id,
-//    &peer_key_id,
-//		raw_secret
-//  );
-// 
-//  CU_ASSERT(res == PSA_SUCCESS);
-//}
-//
-//void test_generate_secret_invalid_key()
-//{
-//	psa_key_id_t invalid = 9999;
-//	uint8_t raw_secret[32];
-//
-//  psa_status_t res = generate_secret(&invalid, &invalid, raw_secret);
-//
-//  CU_ASSERT(res != PSA_SUCCESS);
-//}
+void test_convert_from_id_to_raw_invalid_id_key()
+{
+	crypto_key_t key = {
+		.type = KEY_TYPE_ID,
+		.id = 123
+	};
+	 
+	crypto_status_t status = convert_from_id_to_raw(&key);
+	CU_ASSERT(status == CRYPTO_ERR_INVALID_HANDLE);
+}
+
+void test_convert_from_id_to_raw_with_raw_key()
+{
+	crypto_key_t key;
+
+	crypto_status_t status =  generate_keypair(
+		CRYPTO_CURVE_X25519,
+		&key
+	);
+
+	CU_ASSERT(status == CRYPTO_SUCCESS);
+	 
+	status = convert_from_id_to_raw(&key);
+	CU_ASSERT(status == CRYPTO_SUCCESS);
+	CU_ASSERT(key.type == KEY_TYPE_RAW);
+
+	status = convert_from_id_to_raw(&key);
+	CU_ASSERT(status == CRYPTO_ERR_INVALID_ARGS);
+}
 
 //void test_derive_public_key()
 //{
@@ -587,7 +524,12 @@ int main()
   CU_add_test(suite, "Generate Keypair Using Curve25519", test_generate_keypair_X25519);
   CU_add_test(suite, "Generate Keypair Using NIST P-256", test_generate_keypair_P256);
 
-  CU_add_test(suite, "Generate Secret Key", test_generate_secret_id_id);
+  CU_add_test(suite, "Generate Secret Key Id+Id", test_generate_secret_id_id);
+
+//	CU_add_test(suite, "Convert From Id To Raw", test_convert_from_id_to_raw_valid_id_key);
+//	CU_add_test(suite, "Convert From Id To Raw", test_convert_from_id_to_raw_with_raw_key);
+	CU_add_test(suite, "Convert From Id To Raw", test_convert_from_id_to_raw_invalid_id_key);
+
 //	CU_add_test(suite, "Generate Secret Invalid Key Fails ", test_generate_secret_invalid_key);
 	
 //	CU_add_test(suite, "Derive Public Key", test_derive_public_key);
