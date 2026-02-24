@@ -84,8 +84,7 @@ crypto_status_t generate_keypair(
 crypto_status_t generate_secret(
 	crypto_key_t *priv_key,
 	crypto_key_t *peer_key,
-	uint8_t *raw_secret,
-	size_t *secret_len
+	crypto_key_t *secret
 )
 {
 	psa_status_t status;
@@ -93,7 +92,6 @@ crypto_status_t generate_secret(
 	// Private Key should never be raw, as it is not sent over the air
 	if (priv_key->type == KEY_TYPE_RAW)
 	{
-		printf("priv key is raw ?\n");
 		return CRYPTO_ERR_INVALID_ARGS;
 	}
 	
@@ -120,10 +118,12 @@ crypto_status_t generate_secret(
 		priv_key->id,
 		peer_pub_key,
 		32,
-		raw_secret,
+		secret->raw.data,
 		32,
-		secret_len
+		&(secret->raw.len)
 	);
+	
+	secret->type = KEY_TYPE_RAW;
 
 	return psa_status_to_crypto(status);
 }
@@ -180,7 +180,7 @@ crypto_status_t convert_from_raw_to_id(crypto_key_t *key)
 }
 
 crypto_status_t derive_ephemeral_private_key(
-	const uint8_t master_secret[32],
+	crypto_key_t *secret,
 	const uint8_t *info,
 	size_t info_len,
 	crypto_key_t *private_key)
@@ -207,7 +207,7 @@ crypto_status_t derive_ephemeral_private_key(
 	status = psa_key_derivation_input_bytes(
 		&derivation,
 		PSA_KEY_DERIVATION_INPUT_SECRET,
-		master_secret, 
+		secret->raw.data,
 		32
 	);
 	if (status != PSA_SUCCESS) return psa_status_to_crypto(status);;
@@ -251,7 +251,9 @@ crypto_status_t derive_ephemeral_private_key(
 	return psa_status_to_crypto(status);
 }
 
-crypto_status_t derive_public_key(const uint8_t master_secret[32], crypto_key_t *public_key)
+crypto_status_t derive_public_key(
+	crypto_key_t *secret,
+	crypto_key_t *public_key)
 {
 	crypto_key_t ephemeral_priv_key;
 	crypto_status_t status;
@@ -259,7 +261,7 @@ crypto_status_t derive_public_key(const uint8_t master_secret[32], crypto_key_t 
 	
 
 	status = derive_ephemeral_private_key(
-	    master_secret,
+	    secret,
 	    info,
 	    sizeof(info),
 	    &ephemeral_priv_key
@@ -279,8 +281,7 @@ crypto_status_t derive_public_key(const uint8_t master_secret[32], crypto_key_t 
 }
 
 crypto_status_t derive_symmetric_aes_key_hkdf(
-//	crypto_key_t *secret,
-	uint8_t secret[32],
+	crypto_key_t *secret,
 	uint8_t *salt,
 	uint8_t *info,
 	crypto_key_t *aes_key
@@ -308,8 +309,7 @@ crypto_status_t derive_symmetric_aes_key_hkdf(
   status = psa_key_derivation_input_bytes(
       &deriv,
       PSA_KEY_DERIVATION_INPUT_SECRET,
-//      secret->raw.data
-			secret,
+			secret->raw.data,
       32
   );
   if (status != PSA_SUCCESS) { return psa_status_to_crypto(status); }

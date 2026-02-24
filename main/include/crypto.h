@@ -8,6 +8,8 @@
 #define X25519_KEY_BITS 255
 #define P256_KEY_BITS   256
 
+#define CRYPTO_BACKEND_KEY_HANDLE psa_key_id_t
+
 void curve25519_clamp(uint8_t k[32]);
 
 typedef enum {
@@ -16,9 +18,6 @@ typedef enum {
 } crypto_curve_t;
 
 
-/* Wrapper Implementation */
-
-#define CRYPTO_BACKEND_KEY_HANDLE psa_key_id_t
 
 typedef enum {
 	CRYPTO_SUCCESS,
@@ -53,25 +52,24 @@ crypto_status_t generate_keypair(
 crypto_status_t generate_secret(
 	crypto_key_t *priv_key,
 	crypto_key_t *pub_key,
-	uint8_t *raw_secret,
-	size_t *secret_len
+	crypto_key_t *secret
+//	uint8_t *raw_secret,
 );
 
 crypto_status_t derive_public_key(
-	const uint8_t master_secret[32],
+	crypto_key_t *secret,
 	crypto_key_t *public_key
 );
 
 crypto_status_t derive_ephemeral_private_key(
-    const uint8_t master_secret[32],
+    crypto_key_t *secret,
     const uint8_t *info,
     size_t info_len,
     crypto_key_t *private_key
 );
 
 crypto_status_t derive_symmetric_aes_key_hkdf(
-//	crypto_key_t *secret,
-	uint8_t secret[32],
+	crypto_key_t *secret,
 	uint8_t *salt,
 	uint8_t *info,
 	crypto_key_t *aes_key
