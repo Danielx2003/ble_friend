@@ -8,18 +8,12 @@
 #define X25519_KEY_BITS 255
 #define P256_KEY_BITS   256
 
+void curve25519_clamp(uint8_t k[32]);
+
 typedef enum {
     CRYPTO_CURVE_X25519,
     CRYPTO_CURVE_P256
 } crypto_curve_t;
-
-
-//psa_status_t derive_public_key(
-//	uint8_t master_secret[32],
-//	uint8_t ephemeral_pub_key[PSA_EXPORT_PUBLIC_KEY_MAX_SIZE],
-//	size_t *ephemeral_pub_key_size
-//);
-
 
 
 /* Wrapper Implementation */
@@ -63,5 +57,26 @@ crypto_status_t generate_secret(
 	size_t *secret_len
 );
 
+crypto_status_t derive_public_key(
+	const uint8_t master_secret[32],
+	crypto_key_t *public_key
+);
+
+crypto_status_t derive_ephemeral_private_key(
+    const uint8_t master_secret[32],
+    const uint8_t *info,
+    size_t info_len,
+    crypto_key_t *private_key
+);
+
+crypto_status_t derive_symmetric_aes_key_hkdf(
+//	crypto_key_t *secret,
+	uint8_t secret[32],
+	uint8_t *salt,
+	uint8_t *info,
+	crypto_key_t *aes_key
+);
+
 crypto_status_t convert_from_raw_to_id(crypto_key_t *key);
 crypto_status_t convert_from_id_to_raw(crypto_key_t *key);
+
