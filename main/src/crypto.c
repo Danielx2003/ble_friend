@@ -40,7 +40,6 @@ crypto_status_t psa_status_to_crypto(psa_status_t status)
 		case PSA_ERROR_INVALID_HANDLE:
 			return CRYPTO_ERR_INVALID_HANDLE;
 		default:
-			printf("err code: %d\n", status);
 			return CRYPTO_ERR_UNKNOWN;
 	}
 
