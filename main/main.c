@@ -76,8 +76,6 @@ void on_sync(void)
 
 void app_main(void)
 {
-	crypto_status_t status;
-
   device_init();
 
   ble_callbacks_t callbacks = {
@@ -86,12 +84,6 @@ void app_main(void)
   };
 
 	parser_init(&ble_actions);
-	status = generate_keypair(CRYPTO_CURVE_X25519, &keypair);
-	if (status != CRYPTO_SUCCESS)
-	{
-		ESP_LOGE(tag, "Failed to generate keypair. Status=%d\n", status);
-		return;
-	}
 
   ble_init(&callbacks);
   ble_start();
