@@ -4,19 +4,15 @@
 #include "ble.h"
 #include "device.h"
 #include "parser.h"
+#include "crypto.h"
 
 #include <stdbool.h>
 #include <stdio.h>
 
 /* Static Variables */
 
-/* Static Variables */
-
 static const char *tag = "BLE_SCAN_APP";
-
-void on_pairing_msg(void *ctx, mfg_data_t *mfg);
-void on_lost_msg(void *ctx, mfg_data_t *mfg);
-void on_paired_msg(void *ctx, mfg_data_t *mfg);
+crypto_key_t keypair;
 
 static parser_action_table_t ble_actions = {
   .on_pairing = on_pairing_msg,
@@ -40,22 +36,6 @@ void on_connect(void *ctx)
 void on_disconnect(void *ctx)
 {
   ESP_LOGI(tag, "Disconnected");
-}
-
-void on_pairing_msg(void *ctx, mfg_data_t *mfg)
-{
-	disc_stop();
-	start_connect(ctx);
-}
-
-void on_lost_msg(void *ctx, mfg_data_t *mfg)
-{
-	printf("lost msg receiev\n");
-}
-
-void on_paired_msg(void *ctx, mfg_data_t *mfg)
-{
-	printf("paired msg receiev\n");
 }
 
 void on_ext_disc(void* ctx)
@@ -96,6 +76,8 @@ void on_sync(void)
 
 void app_main(void)
 {
+	crypto_status_t status;
+
   device_init();
 
   ble_callbacks_t callbacks = {
@@ -104,6 +86,12 @@ void app_main(void)
   };
 
 	parser_init(&ble_actions);
+	status = generate_keypair(CRYPTO_CURVE_X25519, &keypair);
+	if (status != CRYPTO_SUCCESS)
+	{
+		ESP_LOGE(tag, "Failed to generate keypair. Status=%d\n", status);
+		return;
+	}
 
   ble_init(&callbacks);
   ble_start();
