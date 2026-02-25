@@ -68,16 +68,16 @@ int on_read(uint16_t conn_handle,
             void *arg)
 {
   const ble_uuid_any_t *uuid = (const ble_uuid_any_t *)arg;
-	psa_key_id_t secret_key;
-	psa_key_id_t keypair;
-
-	generate_keypair(CRYPTO_CURVE_X25519, &keypair);
-
-  if (error->status != 0)
-  {
-    ESP_LOGE(tag, "Read failed status=%d", error->status);
-    return 0;
-  }
+//	psa_key_id_t secret_key;
+//	psa_key_id_t keypair;
+//
+//	generate_keypair(CRYPTO_CURVE_X25519, &keypair);
+//
+//  if (error->status != 0)
+//  {
+//    ESP_LOGE(tag, "Read failed status=%d", error->status);
+//    return 0;
+//  }
 
 //  if (ble_uuid_cmp(&uuid->u, &pub_key_chr_uuid.u) == 0)
 //  {
