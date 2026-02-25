@@ -8,45 +8,73 @@
 #define X25519_KEY_BITS 255
 #define P256_KEY_BITS   256
 
+#define CRYPTO_BACKEND_KEY_HANDLE psa_key_id_t
+
+void curve25519_clamp(uint8_t k[32]);
+
 typedef enum {
     CRYPTO_CURVE_X25519,
     CRYPTO_CURVE_P256
 } crypto_curve_t;
 
 
-/**
- * Generate an ECC keypair for the selected curve.
- * Returns PSA_SUCCESS on success.
- */
-psa_status_t generate_keypair(
-    crypto_curve_t curve,
-    psa_key_id_t* keypair_out
-    );
 
-/**
- * Generate a Secret key using ECDH
- * 
- * @param private_key_id: Device's private key
- * @param peer_key_id: Peer's key
- * @param secret_key_size: ASM key size
- * @param secret_key_id_out: Out param of generated secret key
- *
- * Returns PSA_SUCCESS on success.
- */
-psa_status_t generate_secret(
-    psa_key_id_t* private_key_id,
-    psa_key_id_t* peer_key_id,
-		uint8_t raw_secret[32]
-    );
+typedef enum {
+	CRYPTO_SUCCESS,
+	CRYPTO_ERR_INVALID_ARGS,
+	CRYPTO_ERR_INVALID_HANDLE,
+	CRYPTO_ERR_UNKNOWN
+} crypto_status_t;
 
-psa_status_t derive_public_key(
-	uint8_t master_secret[32],
-	uint8_t ephemeral_pub_key[PSA_EXPORT_PUBLIC_KEY_MAX_SIZE],
-	size_t *ephemeral_pub_key_size
+typedef CRYPTO_BACKEND_KEY_HANDLE crypto_key_handle_t;
+
+typedef enum {
+  KEY_TYPE_ID,
+  KEY_TYPE_RAW
+} key_type_t;
+
+typedef struct {
+	key_type_t type;
+	union {
+	  crypto_key_handle_t id;
+	  struct {
+	    uint8_t data[32];
+	    size_t len;
+	  } raw;
+	};
+} crypto_key_t;
+
+crypto_status_t generate_keypair(
+  crypto_curve_t curve,
+	crypto_key_t *key
 );
 
-psa_status_t generate_secret_raw_bytes(
-  psa_key_id_t *priv_key,
-  uint8_t peer_key[32],
-	uint8_t raw_secret[32]
+crypto_status_t generate_secret(
+	crypto_key_t *priv_key,
+	crypto_key_t *pub_key,
+	crypto_key_t *secret
+//	uint8_t *raw_secret,
 );
+
+crypto_status_t derive_public_key(
+	crypto_key_t *secret,
+	crypto_key_t *public_key
+);
+
+crypto_status_t derive_ephemeral_private_key(
+    crypto_key_t *secret,
+    const uint8_t *info,
+    size_t info_len,
+    crypto_key_t *private_key
+);
+
+crypto_status_t derive_symmetric_aes_key_hkdf(
+	crypto_key_t *secret,
+	uint8_t *salt,
+	uint8_t *info,
+	crypto_key_t *aes_key
+);
+
+crypto_status_t convert_from_raw_to_id(crypto_key_t *key);
+crypto_status_t convert_from_id_to_raw(crypto_key_t *key);
+
