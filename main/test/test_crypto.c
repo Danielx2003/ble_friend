@@ -399,12 +399,12 @@ int main()
 	CU_add_test(suite, "Convert From Id To Raw Valid Id", test_convert_from_id_to_raw_valid_id_key);
 	CU_add_test(suite, "Convert From Id To Raw Invalid Param", test_convert_from_id_to_raw_with_raw_key);
 	CU_add_test(suite, "Convert From Id To Raw Invalid Key", test_convert_from_id_to_raw_invalid_id_key);
-//	
-//	CU_add_test(suite, "Derive Public Key From Secret", test_derive_public_key_from_secret);
-//	
-//	CU_add_test(suite, "Derive AES Key", test_derive_symmetric_aes_key);
-//	
-//	CU_add_test(suite, "Encryption Roundtrip", test_enc_roundtrip);
+	
+	CU_add_test(suite, "Derive Public Key From Secret", test_derive_public_key_from_secret);
+	
+	CU_add_test(suite, "Derive AES Key", test_derive_symmetric_aes_key);
+	
+	CU_add_test(suite, "Encryption Roundtrip", test_enc_roundtrip);
 	
   CU_basic_run_tests();
   CU_cleanup_registry();

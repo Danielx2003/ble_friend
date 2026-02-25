@@ -53,7 +53,6 @@ crypto_status_t generate_secret(
 	crypto_key_t *priv_key,
 	crypto_key_t *pub_key,
 	crypto_key_t *secret
-//	uint8_t *raw_secret,
 );
 
 crypto_status_t derive_public_key(
