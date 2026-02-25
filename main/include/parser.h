@@ -49,14 +49,23 @@ typedef int32_t parser_status_t;
 
 typedef struct {
   parser_action_fn action;
-  mfg_data_t* mfg;
+  mfg_data_t mfg;
 } parser_result_t;
 
 
 void parser_init(parser_action_table_t* actions);
 
+/*
+Public API:
+parser_status_t parse_adv_data(const uint8_t* adv_data, size_t adv_data_len, parser_result_t* out_result);
+
+Internal Functions:
+
+
+*/
+
 // parser_status_t parse(parser_msg_t type, uint8_t* data);
 parser_status_t parse_adv_data(const uint8_t* adv_data, size_t adv_data_len, parser_result_t* out_result);
 parser_status_t extract_mfg_data(const uint8_t* adv_data, size_t adv_data_len, mfg_data_t* out);
 parser_status_t parse_mfg_data(mfg_data_t* mfg, parser_result_t* out_result);
-parser_status_t parse_protocol_msg(parser_msg_t type, mfg_data_t* mfg, parser_result_t* out_result);
+parser_status_t parse_protocol_msg(parser_msg_t type, parser_result_t* out_result);

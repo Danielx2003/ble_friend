@@ -129,7 +129,9 @@ void test_parse_protocol_pairing_msg()
   };
 	
 	parser_result_t result;
-  parser_status_t status = parse_protocol_msg((mfg_data.version_mode & 0x0F), &mfg_data, &result);
+	result.mfg = mfg_data;
+
+  parser_status_t status = parse_protocol_msg((mfg_data.version_mode & 0x0F), &result);
 
   TEST_ASSERT_TRUE(status == PARSER_SUCCESS);
 	
@@ -148,7 +150,9 @@ void test_parse_protocol_paired_msg()
   };
 	
 	parser_result_t result;
-  parser_status_t status = parse_protocol_msg((mfg_data.version_mode & 0x0F), &mfg_data, &result);
+	result.mfg = mfg_data;
+
+  parser_status_t status = parse_protocol_msg((mfg_data.version_mode & 0x0F), &result);
 
   TEST_ASSERT_TRUE(status == PARSER_SUCCESS);
 	
@@ -167,7 +171,9 @@ void test_parse_protocol_lost_msg()
   };
 	
 	parser_result_t result;
-  parser_status_t status = parse_protocol_msg((mfg_data.version_mode & 0x0F), &mfg_data, &result);
+	result.mfg = mfg_data;
+
+  parser_status_t status = parse_protocol_msg((mfg_data.version_mode & 0x0F), &result);
 
   TEST_ASSERT_TRUE(status == PARSER_SUCCESS);
 	
@@ -186,7 +192,9 @@ void test_parse_protocol_invalid_mode()
   };
 	
 	parser_result_t result;
-  parser_status_t status = parse_protocol_msg((mfg_data.version_mode & 0x0F), &mfg_data, &result);
+	result.mfg = mfg_data;
+
+  parser_status_t status = parse_protocol_msg((mfg_data.version_mode & 0x0F), &result);
 
   TEST_ASSERT_TRUE(status == PARSER_ERR_MODE);
 	TEST_ASSERT_TRUE(pairing_msg_called == false);
