@@ -40,3 +40,7 @@ int main()
 	return UNITY_END();
 }
 
+/*
+Compile command:
+gcc -o ../../../build/cbs test_callbacks.c -I../../include/ -I../../../../../Unity/src/ ../../../../../Unity/src/unity.c ../../src/ble_callbacks.c  ../../src/crypto.c ./mock/mock_disc.c  -lmbedtls -lmbedcrypto
+*/
