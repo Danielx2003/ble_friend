@@ -1,5 +1,7 @@
 #pragma once
 
+#include "ble_callbacks.h"
+
 typedef struct {
 	int reason;
 } ble_event_reset_t;
