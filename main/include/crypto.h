@@ -44,6 +44,8 @@ typedef struct {
 	};
 } crypto_key_t;
 
+crypto_status_t crypto_init();
+
 crypto_status_t generate_keypair(
   crypto_curve_t curve,
 	crypto_key_t *key
@@ -72,6 +74,11 @@ crypto_status_t derive_symmetric_aes_key_hkdf(
 	uint8_t *salt,
 	uint8_t *info,
 	crypto_key_t *aes_key
+);
+
+crypto_status_t export_public_key(
+	crypto_key_t *keypair,
+	crypto_key_t *public_key
 );
 
 crypto_status_t convert_from_raw_to_id(crypto_key_t *key);
