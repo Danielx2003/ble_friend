@@ -300,7 +300,7 @@ crypto_status_t derive_symmetric_aes_key_hkdf(
       &deriv,
       PSA_ALG_HKDF(PSA_ALG_SHA_256)
   );
-  if (status != PSA_SUCCESS) { return psa_status_to_crypto(status); }
+	if (status != PSA_SUCCESS) { goto cleanup; }
 
   status = psa_key_derivation_input_bytes(
       &deriv,
@@ -308,7 +308,7 @@ crypto_status_t derive_symmetric_aes_key_hkdf(
       salt,
       salt == NULL ? 0 : sizeof(salt) - 1
   );
-  if (status != PSA_SUCCESS) { return psa_status_to_crypto(status); }
+	if (status != PSA_SUCCESS) { goto cleanup; }
 
   status = psa_key_derivation_input_bytes(
       &deriv,
@@ -316,7 +316,7 @@ crypto_status_t derive_symmetric_aes_key_hkdf(
 			secret->raw.data,
       32
   );
-  if (status != PSA_SUCCESS) { return psa_status_to_crypto(status); }
+	if (status != PSA_SUCCESS) { goto cleanup; }
 
   status = psa_key_derivation_input_bytes(
       &deriv,
@@ -324,7 +324,7 @@ crypto_status_t derive_symmetric_aes_key_hkdf(
       info,
       info == NULL ? 0 : sizeof(info) - 1
   );
-  if (status != PSA_SUCCESS) { return psa_status_to_crypto(status); }
+	if (status != PSA_SUCCESS) { goto cleanup; }
 
   uint8_t finder_sym_bytes[32];
 
@@ -333,8 +333,7 @@ crypto_status_t derive_symmetric_aes_key_hkdf(
       finder_sym_bytes,
       32
   );
-
- 	if (status != PSA_SUCCESS) { return psa_status_to_crypto(status); }
+	if (status != PSA_SUCCESS) { goto cleanup; }
 
   /* Import finder AES key */
   psa_key_attributes_t aes_attr = PSA_KEY_ATTRIBUTES_INIT;
@@ -351,9 +350,15 @@ crypto_status_t derive_symmetric_aes_key_hkdf(
       32,
       &(aes_key->id)
   );
-	if (status != PSA_SUCCESS) { return psa_status_to_crypto(status); }
-	
+	if (status != PSA_SUCCESS) { goto cleanup; }
+
+	psa_key_derivation_abort(&deriv);
+
 	return CRYPTO_SUCCESS;
+
+cleanup:
+	psa_key_derivation_abort(&deriv);
+	return psa_status_to_crypto(status);
 }
 
 crypto_status_t export_public_key(

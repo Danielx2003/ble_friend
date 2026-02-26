@@ -2,6 +2,9 @@
 #include "disc.h"
 #include "crypto.h"
 
+#include <stdio.h>
+#include <string.h>
+
 bool on_pairing_msg(void *ctx, mfg_data_t *mfg)
 {
 	disc_stop();
@@ -13,30 +16,30 @@ bool on_lost_msg(void *ctx, mfg_data_t *mfg)
 {
 	crypto_status_t status;
 	crypto_key_t keypair;
-	
+
 	status = generate_keypair(CRYPTO_CURVE_X25519, &keypair);
 	if (status != CRYPTO_SUCCESS)
 	{
 		return false;
 	}
-	
+
 	/*
 	- Convert Advertised Bytes to Key
 	- Do ECDH
 	- Derive AES Key
 	- Upload to server via POST request	
 	*/
-	
+
 	crypto_key_t eph_pub_key = {
 		.type = KEY_TYPE_RAW,
 		.raw = {
-			.data = {0, 1, 2},
 			.len = mfg->payload_len
 		}
 	};
-	
+	memcpy(eph_pub_key.raw.data, mfg->payload, mfg->payload_len);
+
 	crypto_key_t secret;
-	
+
 	status = generate_secret(
 		&keypair, 
 		&eph_pub_key,
@@ -46,7 +49,7 @@ bool on_lost_msg(void *ctx, mfg_data_t *mfg)
 	{
 		return false;
 	}
-	
+
 	crypto_key_t aes_key;
 	status = derive_symmetric_aes_key_hkdf(
 		&secret,
@@ -58,7 +61,7 @@ bool on_lost_msg(void *ctx, mfg_data_t *mfg)
 	{
 		return false;
 	}
-	
+
 	return true;
 }
 
