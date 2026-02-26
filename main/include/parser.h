@@ -49,7 +49,7 @@ typedef int32_t parser_status_t;
 
 typedef struct {
   parser_action_fn action;
-  mfg_data_t mfg;
+  mfg_data_t *mfg;
 } parser_result_t;
 
 

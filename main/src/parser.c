@@ -8,21 +8,19 @@
 
 static parser_action_table_t *g_actions;
 
-parser_status_t parse_adv_data(const uint8_t* adv_data, size_t adv_data_len, parser_result_t* out_result)
+parser_status_t parse_adv_data(const uint8_t* adv_data, size_t adv_data_len, parser_result_t *out_result)
 {
   parser_status_t status;
-	mfg_data_t mfg;
 
-  status = extract_mfg_data(adv_data, adv_data_len, &mfg);
+  status = extract_mfg_data(adv_data, adv_data_len, out_result->mfg);
   if (status != PARSER_SUCCESS) {
     return status;
   }
-	out_result->mfg = mfg;
 
-  return parse_mfg_data(&(out_result->mfg), out_result);
+  return parse_mfg_data(out_result->mfg, out_result);
 }
 
-parser_status_t extract_mfg_data(const uint8_t* adv_data, size_t adv_data_len, mfg_data_t* out)
+parser_status_t extract_mfg_data(const uint8_t* adv_data, size_t adv_data_len, mfg_data_t *out)
 {
   if (adv_data_len < MIN_ADV_DATA_LEN) {
     return PARSER_ERR_ADV_DATA_LEN;
