@@ -76,7 +76,11 @@ void on_sync(void)
 
 void app_main(void)
 {
-  device_init();
+  if (!device_init())
+	{
+		ESP_LOGE(tag, "Failed to initialise device.");
+		return;
+	}
 
   ble_callbacks_t callbacks = {
     .on_ready = on_sync,
