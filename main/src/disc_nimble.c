@@ -262,7 +262,7 @@ ble_status_t handle_ext_disc(void *ctx)
   memset(&mfg, 0, sizeof(mfg));
 
   parser_result_t result;
-  result.mfg = mfg;
+  result.mfg = &mfg;
 
   status = parse_adv_data(event->ext_disc.data,
                           event->ext_disc.length_data,
@@ -271,7 +271,7 @@ ble_status_t handle_ext_disc(void *ctx)
   if (status != PARSER_SUCCESS)
     return status;
 
-  result.action(event, &(result.mfg));
+  result.action(event, result.mfg);
 
   return BLE_SUCCESS;
 }
