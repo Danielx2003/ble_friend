@@ -10,6 +10,7 @@
 #include "psa/crypto_values.h"
 
 #include <stdio.h>
+#include <string.h>
 
 /* Static Variables */
 
@@ -22,7 +23,7 @@ int disc_cb(struct ble_gap_event *event, void *arg);
 
 static const ble_uuid128_t key_exchange_svr_uuid = BLE_UUID128_INIT(PUB_KEY_SERVICE_UUID);
 static const ble_uuid128_t pub_key_chr_uuid = BLE_UUID128_INIT(PUB_KEY_CHAR_UUID);
-//static const ble_uuid128_t peer_pub_key_chr_uuid = BLE_UUID128_INIT(PEER_PUB_KEY_CHAR_WRITE_UUID);
+static const ble_uuid128_t peer_pub_key_chr_uuid = BLE_UUID128_INIT(PEER_PUB_KEY_CHAR_WRITE_UUID);
 
 static ble_event_cbs_t ble_event_cbs;
 static uint8_t own_addr_type;
@@ -68,78 +69,79 @@ int on_read(uint16_t conn_handle,
             void *arg)
 {
   const ble_uuid_any_t *uuid = (const ble_uuid_any_t *)arg;
-//	psa_key_id_t secret_key;
-//	psa_key_id_t keypair;
-//
-//	generate_keypair(CRYPTO_CURVE_X25519, &keypair);
-//
-//  if (error->status != 0)
-//  {
-//    ESP_LOGE(tag, "Read failed status=%d", error->status);
-//    return 0;
-//  }
+	crypto_key_t secret_key;
+	crypto_key_t keypair;
 
-//  if (ble_uuid_cmp(&uuid->u, &pub_key_chr_uuid.u) == 0)
-//  {
-//		psa_status_t status = generate_shared_secret_raw_bytes(
-//			&keypair,
-//			attr->om->om_data,
-//			attr->om->om_len,
-//			256,
-//			&secret_key
-//		);
-//
-//		if (status != PSA_SUCCESS) {
-//			ESP_LOGE(tag, "Failed to generate secret. status=%d",status);
-//			return -1;
-//		} else {
-//			printf("SUccessfully generated secret key!\n");
-//		}
-//
-//		// Write our public key to peer
-//    const struct peer_chr *chr;
-//		uint8_t pub_key[PSA_EXPORT_PUBLIC_KEY_MAX_SIZE];
-//	  size_t pub_key_len = 0;
-//    int rc;
-//    struct os_mbuf *txom;
-//
-//		status = psa_export_public_key(keypair,
-//		                                 pub_key,
-//		                                 sizeof(pub_key),
-//		                                 &pub_key_len);
-//
-//    const struct peer *peer = peer_find(conn_handle);
-//    chr = peer_chr_find_uuid(
-//				peer,
-//				&key_exchange_svr_uuid.u,
-//			  &peer_pub_key_chr_uuid.u);
-//
-//    if (chr == NULL)
-//		{
-//      printf("Error: Peer doesn't support the Alert "
-//                  "Notification Control Point characteristic\n");
-//			return -1;
-//    }
-//
-//    txom = ble_hs_mbuf_from_flat(&pub_key, pub_key_len);
-//    if (!txom) {
-//      printf("Insufficient memory\n");
-//			return -1;
-//    }
-//
-//    rc = ble_gattc_write_long(conn_handle, chr->chr.val_handle, 0,
-//                              txom, NULL, NULL);
-//    if (rc != 0) {
-//        printf("Error: Failed to write characteristic; rc=%d\n",
-//                    rc);
-//    	return -1;
-//		}
-//
-//  }
-//  else
-//  {
-//    ESP_LOGW(tag, "Unknown characteristic read");
-//  }
+	generate_keypair(CRYPTO_CURVE_X25519, &keypair);
+  if (error->status != 0)
+  {
+    ESP_LOGE(tag, "Read failed status=%d", error->status);
+    return 0;
+  }
+
+  if (ble_uuid_cmp(&uuid->u, &pub_key_chr_uuid.u) == 0)
+  {
+		crypto_key_t peer_pub_key = {
+			.type = KEY_TYPE_RAW,
+			.raw = {
+				.len = attr->om->om_len,
+			}
+		};
+		memcpy(peer_pub_key.raw.data, attr->om->om_data, 32);
+
+		crypto_status_t status = generate_secret(&keypair, &peer_pub_key, &secret_key);
+		if (status != CRYPTO_SUCCESS) {
+			ESP_LOGE(tag, "Failed to generate secret. status=%d",status);
+			return -1;
+		} else {
+			printf("SUccessfully generated secret key!\n");
+		}
+
+		// Write our public key to peer
+    const struct peer_chr *chr;
+    int rc;
+    struct os_mbuf *txom;
+
+		crypto_key_t pub_key;
+
+		status = export_public_key(&keypair, &pub_key);
+		if (status != CRYPTO_SUCCESS) {
+			printf("failed to export public key\n");
+			return -1;
+		}
+
+    const struct peer *peer = peer_find(conn_handle);
+    chr = peer_chr_find_uuid(
+				peer,
+				&key_exchange_svr_uuid.u,
+			  &peer_pub_key_chr_uuid.u);
+
+    if (chr == NULL)
+		{
+      printf("Error: Peer doesn't support the Alert "
+                  "Notification Control Point characteristic\n");
+			return -1;
+    }
+
+    txom = ble_hs_mbuf_from_flat(&pub_key.raw.data, pub_key.raw.len);
+    if (!txom) {
+      printf("Insufficient memory\n");
+			return -1;
+    }
+
+    rc = ble_gattc_write_long(conn_handle, chr->chr.val_handle, 0,
+                              txom, NULL, NULL);
+    if (rc != 0) {
+        printf("Error: Failed to write characteristic; rc=%d\n",
+                    rc);
+    	return -1;
+		}
+
+  }
+  else
+  {
+    ESP_LOGW(tag, "Unknown characteristic read");
+  }
 
   return 0;
 }

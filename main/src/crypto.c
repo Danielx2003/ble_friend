@@ -45,6 +45,11 @@ crypto_status_t psa_status_to_crypto(psa_status_t status)
 
 }
 
+crypto_status_t crypto_init()
+{
+	return psa_status_to_crypto(psa_crypto_init());
+}
+
 crypto_status_t generate_keypair(
   crypto_curve_t curve,
   crypto_key_t *keypair
@@ -350,3 +355,26 @@ crypto_status_t derive_symmetric_aes_key_hkdf(
 	
 	return CRYPTO_SUCCESS;
 }
+
+crypto_status_t export_public_key(
+	crypto_key_t *keypair,
+	crypto_key_t *public_key
+)
+{
+	if (keypair->type == KEY_TYPE_RAW) { return CRYPTO_ERR_INVALID_ARGS; }
+	
+	psa_status_t status;
+	
+	status = psa_export_public_key(
+		keypair->id,
+		public_key->raw.data,
+		32,
+		&(public_key->raw.len)
+	);
+	if (status != PSA_SUCCESS) { return psa_status_to_crypto(status); }
+	
+	public_key->type = KEY_TYPE_RAW;
+		
+	return CRYPTO_SUCCESS;
+}
+

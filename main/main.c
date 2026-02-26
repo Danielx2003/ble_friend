@@ -84,6 +84,7 @@ void app_main(void)
   };
 
 	parser_init(&ble_actions);
+	crypto_init();
 
   ble_init(&callbacks);
   ble_start();
