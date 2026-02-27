@@ -63,7 +63,11 @@ bool on_lost_msg(void *ctx, mfg_data_t *mfg)
 		return false;
 	}
 	
-	upload_lost_details(NULL);
+	request_lost_payload_t payload = {
+		.finder_key = &eph_pub_key
+	};
+	
+	upload_lost_details(&payload);
 
 	return true;
 }
