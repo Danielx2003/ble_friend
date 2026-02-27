@@ -6,7 +6,6 @@ static const char *TAG = "wifi station";
 
 request_status_t upload_lost_details(request_lost_payload_t *payload)
 {
-	printf("calling upload\n");
 	esp_http_client_config_t config = {
 		.url = "http://192.168.0.172:3000/test",
 	};

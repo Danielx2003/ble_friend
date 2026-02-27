@@ -15,7 +15,6 @@ bool on_pairing_msg(void *ctx, mfg_data_t *mfg)
 
 bool on_lost_msg(void *ctx, mfg_data_t *mfg)
 {
-	printf("received lost msg\n");
 	crypto_status_t status;
 	crypto_key_t keypair;
 
@@ -64,7 +63,6 @@ bool on_lost_msg(void *ctx, mfg_data_t *mfg)
 		return false;
 	}
 	
-	printf("sending lost details\n");
 	upload_lost_details(NULL);
 
 	return true;
