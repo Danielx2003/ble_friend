@@ -1,6 +1,7 @@
 #include "ble_callbacks.h"
 #include "disc.h"
 #include "crypto.h"
+#include "request.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -61,6 +62,12 @@ bool on_lost_msg(void *ctx, mfg_data_t *mfg)
 	{
 		return false;
 	}
+	
+	request_lost_payload_t payload = {
+		.finder_key = &eph_pub_key
+	};
+	
+	upload_lost_details(&payload);
 
 	return true;
 }

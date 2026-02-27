@@ -11,8 +11,7 @@
 #include "nvs_flash.h"
 #include "esp_netif.h"
 
-#define WIFI_SSID      "myuser"
-#define WIFI_PASS      "mypass"
+#include "wifi_password.h"
 
 static EventGroupHandle_t s_wifi_event_group;
 static const char *TAG = "wifi";
