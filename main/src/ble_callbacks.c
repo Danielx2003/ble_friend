@@ -24,13 +24,6 @@ bool on_lost_msg(void *ctx, mfg_data_t *mfg)
 		return false;
 	}
 
-	/*
-	- Convert Advertised Bytes to Key
-	- Do ECDH
-	- Derive AES Key
-	- Upload to server via POST request	
-	*/
-
 	crypto_key_t eph_pub_key = {
 		.type = KEY_TYPE_RAW,
 		.raw = {
