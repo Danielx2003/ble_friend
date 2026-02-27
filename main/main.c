@@ -35,7 +35,13 @@ void on_connect(void *ctx)
 
 void on_disconnect(void *ctx)
 {
-  ESP_LOGI(tag, "Disconnected");
+	ble_disc_params_t params = {
+	  .filter_duplicates = 1,
+	  .passive = 1,
+	};
+
+	ble_status_t status = disc_start(&params, 0);
+	printf("status: %d\n", status);
 }
 
 void on_ext_disc(void* ctx)

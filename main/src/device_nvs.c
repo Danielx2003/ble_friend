@@ -73,8 +73,6 @@ bool device_init()
           .ssid = WIFI_SSID,
           .password = WIFI_PASS,
 					.threshold.authmode = WIFI_AUTH_WPA2_PSK,
-//					.sae_pwe_h2e = ESP_WIFI_SAE_MODE,
-//					.sae_h2e_identifier = EXAMPLE_H2E_IDENTIFIER,
       },
   };
 
