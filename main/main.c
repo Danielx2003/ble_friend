@@ -102,15 +102,19 @@
 
 #include "ble2.h"
 #include "device2.h"
+#include "parser2.h"
+
+static parser_action_table_t ble_actions = {
+  .on_pairing = handle_pairing_msg,
+  .on_paired = handle_paired_msg,
+  .on_lost = handle_lost_msg
+};
 
 void app_main()
 {
 	device_init();
-	
-//  ble_callbacks_t callbacks = {
-//    .on_ready = on_sync,
-//    .on_reset = on_reset
-//  };
+
+	parser_init(&ble_actions);
 	
 	ble_init();
 	ble_start();

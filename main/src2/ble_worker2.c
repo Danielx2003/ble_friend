@@ -54,14 +54,17 @@ void ble_worker_task(void *param)
   ble_work_item_t item;
 
   while(1) {
-		vTaskDelay(100);
-	
 	  if(xQueueReceive(ble_worker_queue, &item, portMAX_DELAY)) {
 	    switch(item.type) {
 	      case BLE_WORKER_EVENT_HOST_SYNC:
-					printf("host sync\n");
+					handle_on_sync();
 	        break;
-	
+				case BLE_WORKER_EVENT_EXT_DISC:
+					handle_ext_disc(&item);
+					break;
+				case BLE_WORKER_EVENT_CONNECT:
+					handle_on_connect(&(item));
+					break;
 	      default:
 	        break;
 	      }
