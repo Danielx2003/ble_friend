@@ -55,7 +55,7 @@ typedef struct {
 /* Event Handlers */
 
 ble_status_t handle_on_connect(ble_work_item_t *msg);
-ble_status_t handle_on_disconnect(ble_work_item_t *msg);
+ble_status_t handle_on_disconnect();
 ble_status_t handle_disc_complete(ble_work_disc_complete_t *disc);
 ble_status_t handle_read_complete(ble_work_read_complete_t *read);
 ble_status_t handle_new_connection(ble_work_connect_t *connect);

@@ -113,16 +113,9 @@ void on_disc_complete(const struct peer *peer,
 }
 
 int disc_cb(struct ble_gap_event *event, void *arg)
-{
+{	
   switch (event->type)
   {
-    case BLE_GAP_EVENT_DISCONNECT:
-			printf("disconnected\n");
-      break;
-		case BLE_GAP_EVENT_PARING_COMPLETE:
-		    printf("PAIRING_COMPLETE status=%d\n",
-		           event->pairing_complete.status);
-		    break;
 		case BLE_GAP_EVENT_ENC_CHANGE:
 			if (event->enc_change.status == 0)
 			{
@@ -163,22 +156,34 @@ int disc_cb(struct ble_gap_event *event, void *arg)
       break;
 
     case BLE_GAP_EVENT_EXT_DISC:
-			ble_work_item_t item = {
-				.type = BLE_WORKER_EVENT_EXT_DISC,
-			};
-			
-			item.context.msg.len = event->ext_disc.length_data;
-			memcpy(item.context.msg.data,
-			       event->ext_disc.data,
-			       event->ext_disc.length_data);
-			memcpy(
-				&(item.context.msg.pairing.addr),
-				&(event->ext_disc.addr),
-				sizeof(event->ext_disc.addr)
-			);
+			{
+				ble_work_item_t item = {
+					.type = BLE_WORKER_EVENT_EXT_DISC,
+				};
 
-			xQueueSend(ble_worker_queue, &item, 0);
+				item.context.msg.len = event->ext_disc.length_data;
+				memcpy(item.context.msg.data,
+				       event->ext_disc.data,
+				       event->ext_disc.length_data);
+				memcpy(
+					&(item.context.msg.pairing.addr),
+					&(event->ext_disc.addr),
+					sizeof(event->ext_disc.addr)
+				);
+
+				xQueueSend(ble_worker_queue, &item, 0);
+			}
       break;
+    
+		case BLE_GAP_EVENT_DISCONNECT:
+			{
+				ble_work_item_t item = {
+					.type = BLE_WORKER_EVENT_DISCONNECT,
+				};
+
+				xQueueSend(ble_worker_queue, &item, 0);	
+			}
+			break;
 
     default:
       break;

@@ -1,3 +1,5 @@
 #pragma once
 
-void device_init();
+#include <stdbool.h>
+
+bool device_init();
