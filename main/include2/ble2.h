@@ -4,7 +4,8 @@
 
 typedef enum {
 	BLE_SUCCESS,
-	BLE_ERR_NO_MEMORY
+	BLE_ERR_NO_MEMORY,
+	BLE_FAIL
 } ble_status_t;
 
 typedef struct {
@@ -50,13 +51,16 @@ typedef struct {
   uint16_t interval;
 } ble_disc_params_t;
 
-ble_status_t disc_start(ble_disc_params_t* params, uint32_t duration);
-ble_status_t disc_stop();
-ble_status_t handle_new_connection(ble_work_connect_t *connect);
-ble_status_t handle_ext_disc(ble_work_item_t *msg);
-ble_status_t start_connect(ble_work_msg_t *msg);
+
+/* Event Handlers */
+
 ble_status_t handle_on_connect(ble_work_item_t *msg);
 ble_status_t handle_on_disconnect(ble_work_item_t *msg);
+ble_status_t handle_disc_complete(ble_work_disc_complete_t *disc);
+ble_status_t handle_read_complete(ble_work_read_complete_t *read);
+ble_status_t handle_new_connection(ble_work_connect_t *connect);
+ble_status_t handle_enc_change(ble_work_connect_t *connect);
+
 
 bool handle_pairing_msg(ble_work_msg_t *msg, mfg_data_t *mfg);
 bool handle_paired_msg(ble_work_msg_t *msg, mfg_data_t *mfg);
@@ -68,8 +72,14 @@ Initialise necessary callbacks, BLE services etc
 */
 ble_status_t ble_init();
 
-
 /*
 Start the BLE Worker Task
 */
 ble_status_t ble_start(void);
+
+ble_status_t disc_start(ble_disc_params_t* params, uint32_t duration);
+ble_status_t disc_stop();
+ble_status_t handle_ext_disc(ble_work_item_t *msg);
+ble_status_t start_connect(ble_work_msg_t *msg);
+ble_status_t discover_all_services(ble_work_connect_t *connect);
+

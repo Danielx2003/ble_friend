@@ -8,9 +8,9 @@
 #include "esp_central.h"
 
 static const char* tag = "DISC";
-static const ble_uuid128_t key_exchange_svr_uuid = BLE_UUID128_INIT(PUB_KEY_SERVICE_UUID);
-static const ble_uuid128_t pub_key_chr_uuid = BLE_UUID128_INIT(PUB_KEY_CHAR_UUID);
-static const ble_uuid128_t peer_pub_key_chr_uuid = BLE_UUID128_INIT(PEER_PUB_KEY_CHAR_WRITE_UUID);
+//static const ble_uuid128_t key_exchange_svr_uuid = BLE_UUID128_INIT(PUB_KEY_SERVICE_UUID);
+//static const ble_uuid128_t pub_key_chr_uuid = BLE_UUID128_INIT(PUB_KEY_CHAR_UUID);
+//static const ble_uuid128_t peer_pub_key_chr_uuid = BLE_UUID128_INIT(PEER_PUB_KEY_CHAR_WRITE_UUID);
 
 uint8_t own_addr_type;
 
@@ -98,49 +98,18 @@ int on_read(uint16_t conn_handle,
 }
 
 void on_disc_complete(const struct peer *peer,
-                      int status,
-                      void *arg)
+                             int status,
+                             void *arg)
 {
-  if (status != 0)
-  {
-    ESP_LOGE(tag,
-             "Service discovery failed status=%d",
-             status);
+	ble_work_item_t item = {
+    .type = BLE_WORKER_EVENT_DISC_COMPLETE,
+    .context.disc_complete = {
+      .conn_handle = peer->conn_handle,
+      .status      = status,
+    }
+  };
 
-    ble_gap_terminate(peer->conn_handle,
-                      BLE_ERR_REM_USER_CONN_TERM);
-    return;
-  }
-
-  const struct peer_chr *chr;
-  int rc;
-
-  chr = peer_chr_find_uuid(
-    peer,
-    &key_exchange_svr_uuid.u,
-    &pub_key_chr_uuid.u);
-
-  if (chr == NULL)
-  {
-    ESP_LOGE(tag,
-             "Peer does not support characteristic");
-    return;
-  }
-
-  rc = ble_gattc_read(peer->conn_handle,
-                      chr->chr.val_handle,
-                      on_read,
-                     (void* )(&chr->chr.uuid));
-
-  if (rc != 0)
-  {
-    ESP_LOGE(tag,
-             "Failed to read characteristic rc=%d",
-             rc);
-
-    ble_gap_terminate(peer->conn_handle,
-                      BLE_ERR_REM_USER_CONN_TERM);
-  }
+  xQueueSend(ble_worker_queue, &item, 0);
 }
 
 int disc_cb(struct ble_gap_event *event, void *arg)
@@ -148,20 +117,47 @@ int disc_cb(struct ble_gap_event *event, void *arg)
   switch (event->type)
   {
     case BLE_GAP_EVENT_DISCONNECT:
+			printf("disconnected\n");
       break;
-
-    case BLE_GAP_EVENT_CONNECT:
-      if (event->connect.status == 0)
+		case BLE_GAP_EVENT_PARING_COMPLETE:
+		    printf("PAIRING_COMPLETE status=%d\n",
+		           event->pairing_complete.status);
+		    break;
+		case BLE_GAP_EVENT_ENC_CHANGE:
+			if (event->enc_change.status == 0)
 			{
-				printf("successfully connected. sending event\n");
 				ble_work_item_t item = {
-					.type = BLE_WORKER_EVENT_CONNECT,
+					.type = BLE_WORKER_EVENT_ENC_CHANGE,
 				};
 				item.context.connect.conn_handle = event->connect.conn_handle;
 
 				xQueueSend(ble_worker_queue, &item, 0);	
 			}
-			else {
+			else
+			{
+				printf("failed to upgrade connection. status=%d\n", event->enc_change.status);
+			}
+			break;
+
+    case BLE_GAP_EVENT_CONNECT:
+      if (event->connect.status == 0)
+			{
+				uint16_t conn = event->connect.conn_handle;
+
+				int rc = ble_gap_security_initiate(conn);
+				printf("security initiate rc=%d\n", rc);
+
+				if (rc != 0) {
+				    printf("security initiate failed rc=%d\n", rc);
+				}
+
+				ble_work_item_t item = {
+				    .type = BLE_WORKER_EVENT_CONNECT
+				};
+				item.context.connect.conn_handle = conn;
+
+				xQueueSend(ble_worker_queue, &item, 0);
+			} else {
 				printf("failed to connect. reason=%d\n", event->connect.status);
 			}
       break;
@@ -193,34 +189,47 @@ int disc_cb(struct ble_gap_event *event, void *arg)
 
 /* Public API */
 
+ble_status_t discover_all_services(ble_work_connect_t *connect)
+{
+	uint16_t conn = connect->conn_handle;
+	
+	int rc = peer_add(conn);
+	 if (rc != 0)
+	 {
+	   ESP_LOGE(tag,
+	            "Failed to add peer rc=%d",
+	            rc);
+	   return 0;
+	 }
+
+	 rc = peer_disc_all(conn,
+	                    on_disc_complete,
+	                    NULL);
+	 if (rc != 0)
+	 {
+	   ESP_LOGE(tag,
+	            "Failed to discover services rc=%d",
+	            rc);
+	   return 0;
+	 }
+	 
+	 return BLE_SUCCESS;
+}
+
 ble_status_t handle_new_connection(ble_work_connect_t *connect)
 {
-  int rc;
-
   uint16_t conn = connect->conn_handle;
 
-  ble_gattc_exchange_mtu(conn, NULL, NULL);
-  ble_gap_security_initiate(conn);
-
-  rc = peer_add(conn);
-  if (rc != 0)
-  {
-    ESP_LOGE(tag,
-             "Failed to add peer rc=%d",
-             rc);
-    return 0;
-  }
-
-  rc = peer_disc_all(conn,
-                     on_disc_complete,
-                     NULL);
-  if (rc != 0)
-  {
-    ESP_LOGE(tag,
-             "Failed to discover services rc=%d",
-             rc);
-    return 0;
-  }
+  if (ble_gattc_exchange_mtu(conn, NULL, NULL) != 0)
+	{
+		ESP_LOGE(tag, "failed to exchange MTU");
+	}
+  
+//	if (ble_gap_security_initiate(conn) != 0)
+//	{
+//		ESP_LOGE(tag, "failed to upgrade connection");
+//	}
+	printf("procedure started\n");
 
   return BLE_SUCCESS;
 }

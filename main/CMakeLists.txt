@@ -2,6 +2,6 @@
 #                    INCLUDE_DIRS "." "./include"
 #                    REQUIRES bt nvs_flash mbedtls esp_http_client)
 
-idf_component_register(SRCS "main.c" "src2/ble2.c" "src2/ble_worker2.c" "src2/device2.c" "src2/disc2.c" "src2/parser2.c"
+idf_component_register(SRCS "main.c" "src2/ble2.c" "src2/ble_worker2.c" "src2/device2.c" "src2/disc2.c" "src2/parser2.c" "src2/crypto2.c"
                     INCLUDE_DIRS "." "./include2"
                     REQUIRES bt nvs_flash mbedtls esp_http_client)

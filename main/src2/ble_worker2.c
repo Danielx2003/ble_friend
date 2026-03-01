@@ -28,6 +28,8 @@ void nimble_on_sync()
 	xQueueSend(ble_worker_queue, &item, 0);
 }
 
+static struct ble_npl_event write_event;
+
 void my_ble_host_task(void* param)
 {
   nimble_port_run();
@@ -44,6 +46,11 @@ void ble_worker_task(void *param)
   ble_hs_cfg.reset_cb = nimble_on_reset;
   ble_hs_cfg.sync_cb  = nimble_on_sync;
   ble_hs_cfg.store_status_cb = ble_store_util_status_rr;
+	
+	ble_hs_cfg.sm_bonding = 0;
+	ble_hs_cfg.sm_sc = 1;
+	ble_hs_cfg.sm_our_key_dist = 1;
+	ble_hs_cfg.sm_their_key_dist = 1;
 
   peer_init(4, 64, 64, 64);
   ble_att_set_preferred_mtu(256);
@@ -65,6 +72,16 @@ void ble_worker_task(void *param)
 				case BLE_WORKER_EVENT_CONNECT:
 					handle_on_connect(&(item));
 					break;
+				case BLE_WORKER_EVENT_DISC_COMPLETE:
+					printf("discovery complete\n");
+			    handle_disc_complete(&item.context.disc_complete);
+			    break;
+				case BLE_WORKER_EVENT_READ_COMPLETE:
+					printf("read complete\n");
+			    handle_read_complete(&item.context.read_complete);
+			    break;
+				case BLE_WORKER_EVENT_ENC_CHANGE:
+					handle_enc_change(&item.context.connect);
 	      default:
 	        break;
 	      }
