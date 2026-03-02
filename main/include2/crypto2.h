@@ -17,8 +17,6 @@ typedef enum {
     CRYPTO_CURVE_P256
 } crypto_curve_t;
 
-
-
 typedef enum {
 	CRYPTO_SUCCESS,
 	CRYPTO_ERR_INVALID_ARGS,

@@ -7,6 +7,8 @@
 #include "esp_log.h"
 #include "host/ble_gap.h"
 #include "esp_central.h"
+#include "freertos/idf_additions.h"
+#include "request_worker2.h"
 
 #include <stdio.h>
 
@@ -144,11 +146,18 @@ bool handle_lost_msg(ble_work_msg_t *msg, mfg_data_t *mfg)
 		return false;
 	}
 
-	request_lost_payload_t payload = {
-		.finder_key = &eph_pub_key
+//	request_lost_payload_t payload = {
+//		.finder_key = &eph_pub_key
+//	};
+	
+	// Send Upload Command
+	request_work_item_t item = {
+		.type = REQUEST_WORKER_EVENT_UPLOAD_LOST_LOCATION
 	};
 
-	upload_lost_details(&payload);
+	printf("upload here...\n");
+	
+//	xQueueSend(request_worker_queue, &item, 0);
 	
   return true;
 }
@@ -334,14 +343,16 @@ ble_status_t ble_start(void)
     ESP_LOGE(tag, "Failed to create BLE worker queue");
     return BLE_ERR_NO_MEMORY;
   }
-
-  xTaskCreate(
-      ble_worker_task,
-      "ble_worker",
-      16384,
-      NULL,
-      5,
-      NULL);
+	
+	xTaskCreatePinnedToCore(
+    ble_worker_task,
+    "ble_worker",
+    16384,
+    NULL,
+    5,
+    NULL,
+    0
+	);
 
   return BLE_SUCCESS;
 }

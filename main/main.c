@@ -2,6 +2,7 @@
 #include "crypto2.h"
 #include "device2.h"
 #include "parser2.h"
+#include "request2.h"
 
 static parser_action_table_t ble_actions = {
   .on_pairing = handle_pairing_msg,
@@ -15,6 +16,8 @@ void app_main()
 	{
 		return;
 	}
+	
+	request_init();
 	
 	parser_init(&ble_actions);
 	crypto_init();

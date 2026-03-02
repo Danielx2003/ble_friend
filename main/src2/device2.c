@@ -1,16 +1,3 @@
-//#include "device2.h"
-//#include "nvs_flash.h"
-//
-//void device_init()
-//{
-//	esp_err_t ret = nvs_flash_init();
-//	if  (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-//	    ESP_ERROR_CHECK(nvs_flash_erase());
-//	    ret = nvs_flash_init();
-//	}
-//	ESP_ERROR_CHECK(ret);
-//}
-
 #include "device2.h"
 #include "wifi_password.h"
 
@@ -97,12 +84,15 @@ bool device_init()
 	);
 
 	if (bits & WIFI_CONNECTED_BIT) {
-	    ESP_LOGI("wifi", "Connected to WiFi");
-	    return true;
+		vEventGroupDelete(s_wifi_event_group);
+		ESP_LOGI("wifi", "Connected to WiFi");
+	  return true;
 	} else {
-	    ESP_LOGE("wifi", "Failed to connect");
-	    return false;
+		vEventGroupDelete(s_wifi_event_group);
+	  ESP_LOGE("wifi", "Failed to connect");
+	  return true;
 	}
+	
   
   return true;
 }
