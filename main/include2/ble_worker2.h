@@ -4,7 +4,7 @@
 #include "host/ble_hs.h"
 #include "nimble/ble.h"
 
-#define BLE_QUEUE_LEN 16
+#define BLE_QUEUE_LEN 128
 
 extern QueueHandle_t ble_worker_queue;
 

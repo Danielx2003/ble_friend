@@ -14,89 +14,6 @@ static const char* tag = "DISC";
 
 uint8_t own_addr_type;
 
-int on_read(uint16_t conn_handle,
-            const struct ble_gatt_error *error,
-            struct ble_gatt_attr *attr,
-            void *arg)
-{
-//  const ble_uuid_any_t *uuid = (const ble_uuid_any_t *)arg;
-//	crypto_key_t secret_key;
-//	crypto_key_t keypair;
-//
-//	generate_keypair(CRYPTO_CURVE_X25519, &keypair);
-//  if (error->status != 0)
-//  {
-//    ESP_LOGE(tag, "Read failed status=%d", error->status);
-//    return 0;
-//  }
-//
-//  if (ble_uuid_cmp(&uuid->u, &pub_key_chr_uuid.u) == 0)
-//  {
-//		crypto_key_t peer_pub_key = {
-//			.type = KEY_TYPE_RAW,
-//			.raw = {
-//				.len = attr->om->om_len,
-//			}
-//		};
-//		memcpy(peer_pub_key.raw.data, attr->om->om_data, 32);
-//
-//		crypto_status_t status = generate_secret(&keypair, &peer_pub_key, &secret_key);
-//		if (status != CRYPTO_SUCCESS) {
-//			ESP_LOGE(tag, "Failed to generate secret. status=%d",status);
-//			return -1;
-//		} else {
-//			printf("SUccessfully generated secret key!\n");
-//		}
-//
-//		// Write our public key to peer
-//    const struct peer_chr *chr;
-//    int rc;
-//    struct os_mbuf *txom;
-//
-//		crypto_key_t pub_key;
-//
-//		status = export_public_key(&keypair, &pub_key);
-//		if (status != CRYPTO_SUCCESS) {
-//			printf("failed to export public key\n");
-//			return -1;
-//		}
-//
-//    const struct peer *peer = peer_find(conn_handle);
-//    chr = peer_chr_find_uuid(
-//				peer,
-//				&key_exchange_svr_uuid.u,
-//			  &peer_pub_key_chr_uuid.u);
-//
-//    if (chr == NULL)
-//		{
-//      printf("Error: Peer doesn't support the Alert "
-//                  "Notification Control Point characteristic\n");
-//			return -1;
-//    }
-//
-//    txom = ble_hs_mbuf_from_flat(&pub_key.raw.data, pub_key.raw.len);
-//    if (!txom) {
-//      printf("Insufficient memory\n");
-//			return -1;
-//    }
-//
-//    rc = ble_gattc_write_long(conn_handle, chr->chr.val_handle, 0,
-//                              txom, NULL, NULL);
-//    if (rc != 0) {
-//        printf("Error: Failed to write characteristic; rc=%d\n",
-//                    rc);
-//    	return -1;
-//		}
-//
-//  }
-//  else
-//  {
-//    ESP_LOGW(tag, "Unknown characteristic read");
-//  }
-
-  return 0;
-}
-
 void on_disc_complete(const struct peer *peer,
                              int status,
                              void *arg)
@@ -126,10 +43,6 @@ int disc_cb(struct ble_gap_event *event, void *arg)
 
 				xQueueSend(ble_worker_queue, &item, 0);	
 			}
-			else
-			{
-				printf("failed to upgrade connection. status=%d\n", event->enc_change.status);
-			}
 			break;
 
     case BLE_GAP_EVENT_CONNECT:
@@ -138,7 +51,6 @@ int disc_cb(struct ble_gap_event *event, void *arg)
 				uint16_t conn = event->connect.conn_handle;
 
 				int rc = ble_gap_security_initiate(conn);
-				printf("security initiate rc=%d\n", rc);
 
 				if (rc != 0) {
 				    printf("security initiate failed rc=%d\n", rc);
@@ -185,6 +97,10 @@ int disc_cb(struct ble_gap_event *event, void *arg)
 			}
 			break;
 
+		case BLE_GAP_EVENT_DISC_COMPLETE:
+			printf("discovery complete\n");
+			printf("Total Payloads: %d\n", payloads_received);
+			break;
     default:
       break;
   }
@@ -280,10 +196,11 @@ ble_status_t disc_start(ble_disc_params_t *params,
   struct ble_gap_disc_params disc_params;
   memset(&disc_params, 0, sizeof(disc_params));
 
-  disc_params.filter_duplicates = params->filter_duplicates;
+//  disc_params.filter_duplicates = params->filter_duplicates;
+	disc_params.filter_duplicates = 0;
   disc_params.passive = params->passive;
-  disc_params.itvl = BLE_GAP_SCAN_ITVL_MS(500);
-	disc_params.window = BLE_GAP_SCAN_WIN_MS(300);
+  disc_params.itvl = BLE_GAP_SCAN_ITVL_MS(100);
+	disc_params.window = BLE_GAP_SCAN_WIN_MS(75);
 	
 	// BLE_GAP_SCAN_SLOW_INTERVAL1 -> Terrible for discovery
 
@@ -299,7 +216,7 @@ ble_status_t disc_start(ble_disc_params_t *params,
   duration = (duration == 0) ? BLE_HS_FOREVER : duration;
 
   rc = ble_gap_disc(own_addr_type,
-                    duration,
+                    60000, // 2 mins = 120000, 1 min = 60000
                     &disc_params,
                     disc_cb,
                     NULL);

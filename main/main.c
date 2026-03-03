@@ -17,7 +17,7 @@ void app_main()
 		return;
 	}
 	
-	request_init();
+//	request_init();
 	
 	parser_init(&ble_actions);
 	crypto_init();

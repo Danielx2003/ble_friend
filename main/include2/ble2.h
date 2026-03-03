@@ -20,6 +20,7 @@ typedef struct {
 void handle_on_sync(void);
 void handle_on_lost_msg();
 
+extern int payloads_received;
 
 /*Disc*/
 

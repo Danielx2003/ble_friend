@@ -102,6 +102,8 @@ bool handle_paired_msg(ble_work_msg_t *msg, mfg_data_t *mfg)
   return true;
 }
 
+int payloads_received = 0; 
+
 
 bool handle_lost_msg(ble_work_msg_t *msg, mfg_data_t *mfg)
 {
@@ -151,11 +153,12 @@ bool handle_lost_msg(ble_work_msg_t *msg, mfg_data_t *mfg)
 //	};
 	
 	// Send Upload Command
-	request_work_item_t item = {
-		.type = REQUEST_WORKER_EVENT_UPLOAD_LOST_LOCATION
-	};
+//	request_work_item_t item = {
+//		.type = REQUEST_WORKER_EVENT_UPLOAD_LOST_LOCATION
+//	};
 
-	printf("upload here...\n");
+//	printf("upload here...\n");
+//	payloads_received += 1;
 	
 //	xQueueSend(request_worker_queue, &item, 0);
 	
@@ -236,7 +239,6 @@ ble_status_t handle_ext_disc(ble_work_item_t *item)
 {
   parser_status_t status;
   mfg_data_t mfg;
-  memset(&mfg, 0, sizeof(mfg));
 
   parser_result_t result = {
     .mfg = &mfg
@@ -246,12 +248,14 @@ ble_status_t handle_ext_disc(ble_work_item_t *item)
       item->context.msg.data,
       item->context.msg.len,
       &result);
+//	status = parse_adv_data_fast(
+//	    item->context.msg.data,
+//	    item->context.msg.len,
+//	    &result);
+	if (status != CRYPTO_SUCCESS) { return BLE_FAIL; }
 
-  if (status != PARSER_SUCCESS) {
-    return status;
-  }
-
-  result.action(&item->context.msg, result.mfg);
+	payloads_received += 1;	
+//  result.action(&item->context.msg, result.mfg);
   return BLE_SUCCESS;
 }
 
@@ -344,14 +348,13 @@ ble_status_t ble_start(void)
     return BLE_ERR_NO_MEMORY;
   }
 	
-	xTaskCreatePinnedToCore(
+	xTaskCreate(
     ble_worker_task,
     "ble_worker",
     16384,
     NULL,
-    5,
-    NULL,
-    0
+    20,
+    NULL
 	);
 
   return BLE_SUCCESS;

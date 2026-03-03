@@ -63,6 +63,7 @@ void ble_worker_task(void *param)
 					handle_on_sync();
 	        break;
 				case BLE_WORKER_EVENT_EXT_DISC:
+//					payloads_received += 1;
 					handle_ext_disc(&item);
 					break;
 				case BLE_WORKER_EVENT_CONNECT:
