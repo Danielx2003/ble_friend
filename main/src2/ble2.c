@@ -2,13 +2,13 @@
 #include "ble_worker2.h"
 #include "parser2.h"
 #include "crypto2.h"
-//#include "request2.h"
+#include "request2.h"
 
 #include "esp_log.h"
 #include "host/ble_gap.h"
 #include "esp_central.h"
 #include "freertos/idf_additions.h"
-//#include "request_worker2.h"
+#include "request_worker2.h"
 
 #include <stdio.h>
 
@@ -43,6 +43,7 @@ void handle_on_sync(void)
     ESP_LOGE(tag, "Failed to start discovery. Status=%d", status);
   }
 }
+
 
 /* Protocol Message Handlers */
 
@@ -207,7 +208,11 @@ ble_status_t handle_ext_disc(ble_work_item_t *item)
       item->context.msg.data,
       item->context.msg.len,
       &result);
-	if (status != CRYPTO_SUCCESS) { return BLE_FAIL; }
+
+//	status = parse_adv_data_fast(
+//	    item->context.msg.data,
+//	    item->context.msg.len,
+//	    &result);
 
 	payloads_received += 1;	
 //  result.action(&item->context.msg, result.mfg);
@@ -284,6 +289,7 @@ ble_status_t handle_on_disconnect()
 
   return BLE_SUCCESS;
 }
+
 
 /* Public API */
 
