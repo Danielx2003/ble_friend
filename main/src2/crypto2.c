@@ -1,6 +1,5 @@
 #include "crypto2.h"
 #include "psa/crypto.h"
-#include "psa/crypto_struct.h"
 #include "psa/crypto_types.h"
 #include "psa/crypto_values.h"
 
