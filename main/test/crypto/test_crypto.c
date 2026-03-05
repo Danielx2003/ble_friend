@@ -1,5 +1,5 @@
 #include "unity.h"
-#include "crypto.h"
+#include "crypto2.h"
 
 #include "psa/crypto.h"
 
@@ -381,13 +381,6 @@ void test_enc_roundtrip()
   ) == 0);
 }
 
-void test_generate_nonce()
-{
-	uint8_t nonce[128];
-	crypto_status_t status = generate_nonce(nonce, 128);
-	TEST_ASSERT_TRUE(status == CRYPTO_SUCCESS);
-}
-
 int main()
 {
 	UNITY_BEGIN();
@@ -411,9 +404,6 @@ int main()
 	/* Derive AES Key Tests */
 	RUN_TEST(test_derive_symmetric_aes_key);
 	RUN_TEST(test_enc_roundtrip);
-
-	/* Generate Nonce */
-	RUN_TEST(test_generate_nonce);
 
 	return UNITY_END();
 }

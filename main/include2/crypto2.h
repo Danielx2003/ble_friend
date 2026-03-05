@@ -79,11 +79,6 @@ crypto_status_t export_public_key(
 	crypto_key_t *public_key
 );
 
-crypto_status_t generate_nonce(
-	uint8_t *nonce,
-	size_t nonce_len
-);
-
 crypto_status_t convert_from_raw_to_id(crypto_key_t *key);
 crypto_status_t convert_from_id_to_raw(crypto_key_t *key);
 

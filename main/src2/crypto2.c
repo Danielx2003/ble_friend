@@ -383,11 +383,3 @@ crypto_status_t export_public_key(
 	return CRYPTO_SUCCESS;
 }
 
-crypto_status_t generate_nonce(
-	uint8_t *nonce,
-	size_t nonce_len
-)
-{
-	psa_status_t status = psa_generate_random(nonce, nonce_len);
-	return psa_status_to_crypto(status);
-}
