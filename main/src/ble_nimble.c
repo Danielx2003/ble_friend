@@ -73,6 +73,7 @@ int ble_init(const ble_callbacks_t* callbacks)
 
   return 0;
 }
+
 int ble_start(void)
 {
     nimble_port_freertos_init(ble_host_task);
