@@ -52,6 +52,10 @@ typedef struct {
   uint16_t interval;
 } ble_disc_params_t;
 
+int on_read(uint16_t conn_handle,
+                   const struct ble_gatt_error *error,
+                   struct ble_gatt_attr *attr,
+                   void *arg);
 
 /* Event Handlers */
 
