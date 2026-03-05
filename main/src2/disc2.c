@@ -7,12 +7,48 @@
 #include "esp_log.h"
 #include "esp_central.h"
 
-static const char* tag = "DISC";
-//static const ble_uuid128_t key_exchange_svr_uuid = BLE_UUID128_INIT(PUB_KEY_SERVICE_UUID);
-//static const ble_uuid128_t pub_key_chr_uuid = BLE_UUID128_INIT(PUB_KEY_CHAR_UUID);
-//static const ble_uuid128_t peer_pub_key_chr_uuid = BLE_UUID128_INIT(PEER_PUB_KEY_CHAR_WRITE_UUID);
+/* Static + Global Variables */
 
+static const char* tag = "DISC";
 uint8_t own_addr_type;
+
+/* GAP Event Callbacks */
+
+int on_read(uint16_t conn_handle,
+                   const struct ble_gatt_error *error,
+                   struct ble_gatt_attr *attr,
+                   void *arg)
+{
+  ble_work_item_t item = {
+    .type = BLE_WORKER_EVENT_READ_COMPLETE,
+    .context.read_complete = {
+      .conn_handle = conn_handle,
+      .status = error->status,
+      .data_len = 0,
+    }
+  };
+
+  if (error->status == 0 && attr && attr->om) {
+    uint16_t len = OS_MBUF_PKTLEN(attr->om);
+
+    if (len > sizeof(item.context.read_complete.data)) {
+      ESP_LOGE(tag, "Read data too large: %d bytes", len);
+      return BLE_ATT_ERR_INSUFFICIENT_RES;
+    }
+
+    os_mbuf_copydata(
+        attr->om,
+        0,
+        len,
+        item.context.read_complete.data);
+
+    item.context.read_complete.data_len = len;
+  }
+
+  xQueueSend(ble_worker_queue, &item, 0);
+  return 0;
+}
+
 
 void on_disc_complete(const struct peer *peer,
                              int status,
@@ -28,6 +64,7 @@ void on_disc_complete(const struct peer *peer,
 
   xQueueSend(ble_worker_queue, &item, 0);
 }
+
 
 int disc_cb(struct ble_gap_event *event, void *arg)
 {	
@@ -137,6 +174,7 @@ ble_status_t discover_all_services(ble_work_connect_t *connect)
 	 return BLE_SUCCESS;
 }
 
+
 ble_status_t handle_new_connection(ble_work_connect_t *connect)
 {
   uint16_t conn = connect->conn_handle;
@@ -146,11 +184,10 @@ ble_status_t handle_new_connection(ble_work_connect_t *connect)
 		ESP_LOGE(tag, "failed to exchange MTU");
 	}
   
-//	if (ble_gap_security_initiate(conn) != 0)
-//	{
-//		ESP_LOGE(tag, "failed to upgrade connection");
-//	}
-	printf("procedure started\n");
+	if (ble_gap_security_initiate(conn) != 0)
+	{
+		ESP_LOGE(tag, "failed to upgrade connection");
+	}
 
   return BLE_SUCCESS;
 }
@@ -200,7 +237,7 @@ ble_status_t disc_start(ble_disc_params_t *params,
 	disc_params.filter_duplicates = 0;
   disc_params.passive = params->passive;
   disc_params.itvl = BLE_GAP_SCAN_ITVL_MS(100);
-	disc_params.window = BLE_GAP_SCAN_WIN_MS(75);
+	disc_params.window = BLE_GAP_SCAN_WIN_MS(10);
 	
 	// BLE_GAP_SCAN_SLOW_INTERVAL1 -> Terrible for discovery
 
@@ -247,4 +284,3 @@ ble_status_t disc_stop()
 
 	return BLE_SUCCESS;
 }
-

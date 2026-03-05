@@ -62,20 +62,19 @@ ble_status_t handle_read_complete(ble_work_read_complete_t *read);
 ble_status_t handle_new_connection(ble_work_connect_t *connect);
 ble_status_t handle_enc_change(ble_work_connect_t *connect);
 
+int on_read(uint16_t conn_handle,
+                   const struct ble_gatt_error *error,
+                   struct ble_gatt_attr *attr,
+                   void *arg);
+
 
 bool handle_pairing_msg(ble_work_msg_t *msg, mfg_data_t *mfg);
 bool handle_paired_msg(ble_work_msg_t *msg, mfg_data_t *mfg);
 bool handle_lost_msg(ble_work_msg_t *msg, mfg_data_t *mfg);
+
 /* Public API */
 
-/*
-Initialise necessary callbacks, BLE services etc
-*/
 ble_status_t ble_init();
-
-/*
-Start the BLE Worker Task
-*/
 ble_status_t ble_start(void);
 
 ble_status_t disc_start(ble_disc_params_t* params, uint32_t duration);

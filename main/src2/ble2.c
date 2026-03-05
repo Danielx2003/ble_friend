@@ -2,13 +2,13 @@
 #include "ble_worker2.h"
 #include "parser2.h"
 #include "crypto2.h"
-#include "request2.h"
+//#include "request2.h"
 
 #include "esp_log.h"
 #include "host/ble_gap.h"
 #include "esp_central.h"
 #include "freertos/idf_additions.h"
-#include "request_worker2.h"
+//#include "request_worker2.h"
 
 #include <stdio.h>
 
@@ -28,10 +28,6 @@ QueueHandle_t ble_worker_queue = NULL;
 /* Function Declarations */
 
 void ble_store_config_init(void);
-static int on_read(uint16_t conn_handle,
-                   const struct ble_gatt_error *error,
-                   struct ble_gatt_attr *attr,
-                   void *arg);
 
 /* NimBLE Stack Callbacks */
 									 
@@ -46,43 +42,6 @@ void handle_on_sync(void)
   if (status != BLE_SUCCESS) {
     ESP_LOGE(tag, "Failed to start discovery. Status=%d", status);
   }
-}
-
-/* GATT Callback */
-
-static int on_read(uint16_t conn_handle,
-                   const struct ble_gatt_error *error,
-                   struct ble_gatt_attr *attr,
-                   void *arg)
-{
-  ble_work_item_t item = {
-    .type = BLE_WORKER_EVENT_READ_COMPLETE,
-    .context.read_complete = {
-      .conn_handle = conn_handle,
-      .status = error->status,
-      .data_len = 0,
-    }
-  };
-
-  if (error->status == 0 && attr && attr->om) {
-    uint16_t len = OS_MBUF_PKTLEN(attr->om);
-
-    if (len > sizeof(item.context.read_complete.data)) {
-      ESP_LOGE(tag, "Read data too large: %d bytes", len);
-      return BLE_ATT_ERR_INSUFFICIENT_RES;
-    }
-
-    os_mbuf_copydata(
-        attr->om,
-        0,
-        len,
-        item.context.read_complete.data);
-
-    item.context.read_complete.data_len = len;
-  }
-
-  xQueueSend(ble_worker_queue, &item, 0);
-  return 0;
 }
 
 /* Protocol Message Handlers */
@@ -248,10 +207,6 @@ ble_status_t handle_ext_disc(ble_work_item_t *item)
       item->context.msg.data,
       item->context.msg.len,
       &result);
-//	status = parse_adv_data_fast(
-//	    item->context.msg.data,
-//	    item->context.msg.len,
-//	    &result);
 	if (status != CRYPTO_SUCCESS) { return BLE_FAIL; }
 
 	payloads_received += 1;	
@@ -329,7 +284,6 @@ ble_status_t handle_on_disconnect()
 
   return BLE_SUCCESS;
 }
-
 
 /* Public API */
 
