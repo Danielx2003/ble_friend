@@ -1,3 +1,4 @@
+#include "psa/crypto_values.h"
 #include "unity.h"
 #include "crypto2.h"
 
@@ -381,6 +382,80 @@ void test_enc_roundtrip()
   ) == 0);
 }
 
+void test_generate_ecdsa_keypair()
+{
+	crypto_status_t status;
+	crypto_key_t keypair;
+
+	status = generate_ecdsa_keypair(&keypair);
+	TEST_ASSERT_TRUE(status == CRYPTO_SUCCESS);
+}
+
+void test_generate_ecdsa_keypair_signs_and_verifies()
+{
+	crypto_status_t status;
+	crypto_key_t keypair;
+
+	status = generate_ecdsa_keypair(&keypair);
+	TEST_ASSERT_TRUE(status == CRYPTO_SUCCESS);
+
+	uint8_t pub_key[256];
+	size_t pub_key_len;
+
+	status = psa_export_public_key(
+		keypair.id,
+		pub_key,
+		sizeof(pub_key),
+		&pub_key_len
+	);
+	TEST_ASSERT_TRUE(status == CRYPTO_SUCCESS);
+
+	uint8_t input[] = {0x44, 0x45};
+	uint8_t signature[PSA_SIGNATURE_MAX_SIZE];
+	size_t signature_len;
+
+	status = psa_sign_message(
+		keypair.id,
+		PSA_ALG_ECDSA(PSA_ALG_SHA_256),
+		input,
+		sizeof(input),
+		signature,
+		PSA_SIGNATURE_MAX_SIZE,
+		&signature_len
+	);
+	TEST_ASSERT_TRUE(status == CRYPTO_SUCCESS);
+
+	/* Import Key */
+	psa_key_attributes_t attr = PSA_KEY_ATTRIBUTES_INIT;
+	psa_set_key_type(&attr, PSA_KEY_TYPE_ECC_PUBLIC_KEY(PSA_ECC_FAMILY_SECP_K1));
+	psa_set_key_bits(&attr, 256);
+
+	psa_set_key_usage_flags(&attr,
+	   PSA_KEY_USAGE_SIGN_MESSAGE | PSA_KEY_USAGE_VERIFY_MESSAGE
+	);
+	psa_set_key_algorithm(&attr, PSA_ALG_ECDSA(PSA_ALG_SHA_256));
+
+	psa_key_id_t output_key;
+
+	status = psa_import_key(
+		&attr,
+		pub_key,
+		pub_key_len,
+		&output_key
+	);
+	TEST_ASSERT_TRUE(status == PSA_SUCCESS);
+
+	status = psa_verify_message(
+		output_key,
+		PSA_ALG_ECDSA(PSA_ALG_SHA_256),
+		input,
+		sizeof(input),
+		signature,
+		signature_len
+	);
+	TEST_ASSERT_TRUE(status == CRYPTO_SUCCESS);
+}
+
 int main()
 {
 	UNITY_BEGIN();
@@ -404,6 +479,10 @@ int main()
 	/* Derive AES Key Tests */
 	RUN_TEST(test_derive_symmetric_aes_key);
 	RUN_TEST(test_enc_roundtrip);
+
+	/* Generate ECDSA Keypair */
+	RUN_TEST(test_generate_ecdsa_keypair);
+	RUN_TEST(test_generate_ecdsa_keypair_signs_and_verifies);
 
 	return UNITY_END();
 }

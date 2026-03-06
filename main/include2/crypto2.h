@@ -36,7 +36,7 @@ typedef struct {
 	union {
 	  crypto_key_handle_t id;
 	  struct {
-	    uint8_t data[32];
+	    uint8_t data[256];
 	    size_t len;
 	  } raw;
 	};
@@ -76,7 +76,12 @@ crypto_status_t derive_symmetric_aes_key_hkdf(
 
 crypto_status_t export_public_key(
 	crypto_key_t *keypair,
-	crypto_key_t *public_key
+	crypto_key_t *public_key,
+	size_t public_key_size
+);
+
+crypto_status_t generate_ecdsa_keypair(
+	crypto_key_t *keypair
 );
 
 crypto_status_t convert_from_raw_to_id(crypto_key_t *key);

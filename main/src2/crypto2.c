@@ -363,7 +363,8 @@ cleanup:
 
 crypto_status_t export_public_key(
 	crypto_key_t *keypair,
-	crypto_key_t *public_key
+	crypto_key_t *public_key,
+	size_t public_key_size
 )
 {
 	if (keypair->type == KEY_TYPE_RAW) { return CRYPTO_ERR_INVALID_ARGS; }
@@ -373,7 +374,7 @@ crypto_status_t export_public_key(
 	status = psa_export_public_key(
 		keypair->id,
 		public_key->raw.data,
-		32,
+		public_key_size,
 		&(public_key->raw.len)
 	);
 	if (status != PSA_SUCCESS) { return psa_status_to_crypto(status); }
@@ -383,3 +384,21 @@ crypto_status_t export_public_key(
 	return CRYPTO_SUCCESS;
 }
 
+crypto_status_t generate_ecdsa_keypair(crypto_key_t *keypair)
+{
+	psa_key_attributes_t attr = PSA_KEY_ATTRIBUTES_INIT;
+	psa_status_t status;
+
+  psa_set_key_type(&attr, PSA_KEY_TYPE_ECC_KEY_PAIR(PSA_ECC_FAMILY_SECP_K1));
+  psa_set_key_bits(&attr, 256);
+
+	psa_set_key_usage_flags(&attr,
+	   PSA_KEY_USAGE_SIGN_MESSAGE | PSA_KEY_USAGE_VERIFY_MESSAGE
+	);
+	psa_set_key_algorithm(&attr, PSA_ALG_ECDSA(PSA_ALG_SHA_256));
+
+	status = psa_generate_key(&attr, &(keypair->id));
+	keypair->type = KEY_TYPE_ID;
+
+	return psa_status_to_crypto(PSA_SUCCESS);
+}
