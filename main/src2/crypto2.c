@@ -393,7 +393,7 @@ crypto_status_t generate_ecdsa_keypair(crypto_key_t *keypair)
   psa_set_key_bits(&attr, 256);
 
 	psa_set_key_usage_flags(&attr,
-	   PSA_KEY_USAGE_SIGN_MESSAGE | PSA_KEY_USAGE_VERIFY_MESSAGE
+	   PSA_KEY_USAGE_SIGN_MESSAGE
 	);
 	psa_set_key_algorithm(&attr, PSA_ALG_ECDSA(PSA_ALG_SHA_256));
 
