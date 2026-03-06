@@ -1,5 +1,6 @@
 #pragma once
 
+#include "crypto_worker2.h"
 #include "psa/crypto.h"
 
 #include <unistd.h>

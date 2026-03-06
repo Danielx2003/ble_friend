@@ -16,7 +16,7 @@ typedef struct {
 typedef struct {
 	request_worker_event_t type;
 	union {
-		request_work_upload_lost_loc_t lost_loc;
+		request_work_upload_lost_loc_t lost_location;
 	};
 } request_work_item_t;
 

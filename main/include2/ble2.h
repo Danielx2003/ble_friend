@@ -68,9 +68,9 @@ ble_status_t handle_enc_change(ble_work_connect_t *connect);
 
 
 
-bool handle_pairing_msg(ble_work_msg_t *msg, mfg_data_t *mfg);
-bool handle_paired_msg(ble_work_msg_t *msg, mfg_data_t *mfg);
-bool handle_lost_msg(ble_work_msg_t *msg, mfg_data_t *mfg);
+void handle_pairing_msg(ble_work_msg_t *msg, mfg_data_t *mfg);
+void handle_paired_msg(ble_work_msg_t *msg, mfg_data_t *mfg);
+void handle_lost_msg(ble_work_msg_t *msg, mfg_data_t *mfg);
 
 
 /* Public API */
