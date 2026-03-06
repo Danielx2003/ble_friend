@@ -1,4 +1,5 @@
 #include "crypto2.h"
+#include "crypto_worker2.h"
 #include "psa/crypto.h"
 #include "psa/crypto_types.h"
 #include "psa/crypto_values.h"
@@ -10,6 +11,7 @@
 /* Static Variables */
 
 static uint8_t counter = 1;
+QueueHandle_t crypto_worker_queue = NULL;
 
 /* Static Functions */
 
@@ -47,6 +49,23 @@ crypto_status_t psa_status_to_crypto(psa_status_t status)
 
 crypto_status_t crypto_init()
 {
+	crypto_worker_queue =
+	    xQueueCreate(128, sizeof(crypto_work_item_t));
+
+	if (!crypto_worker_queue) {
+	  return CRYPTO_ERR_UNKNOWN;
+	}
+
+	xTaskCreatePinnedToCore(
+	  crypto_worker_task,
+	  "crypto_worker",
+	  8192,
+	  NULL,
+	  15,
+	  NULL,
+		1
+	);
+
 	return psa_status_to_crypto(psa_crypto_init());
 }
 
