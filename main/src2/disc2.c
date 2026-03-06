@@ -1,6 +1,7 @@
 #include "ble2.h"
 
 #include "ble_worker2.h"
+#include "crypto_worker2.h"
 #include "host/ble_hs.h"
 #include "host/ble_gap.h"
 #include "host/util/util.h"
@@ -19,14 +20,14 @@ int on_read(uint16_t conn_handle,
                    struct ble_gatt_attr *attr,
                    void *arg)
 {
-  ble_work_item_t item = {
-    .type = BLE_WORKER_EVENT_READ_COMPLETE,
-    .context.read_complete = {
-      .conn_handle = conn_handle,
-      .status = error->status,
-      .data_len = 0,
-    }
-  };
+	crypto_work_item_t item = {
+		.type = CRYPTO_WORKER_EVENT_READ_COMPLETE,
+		.context.read_complete = {
+		  .conn_handle = conn_handle,
+		  .status = error->status,
+		  .data_len = 0,
+		}
+	};
 
   if (error->status == 0 && attr && attr->om) {
     uint16_t len = OS_MBUF_PKTLEN(attr->om);
@@ -45,7 +46,7 @@ int on_read(uint16_t conn_handle,
     item.context.read_complete.data_len = len;
   }
 
-  xQueueSend(ble_worker_queue, &item, 0);
+  xQueueSend(crypto_worker_queue, &item, 0);
   return 0;
 }
 
@@ -237,7 +238,7 @@ ble_status_t disc_start(ble_disc_params_t *params,
 	disc_params.filter_duplicates = 0;
   disc_params.passive = params->passive;
   disc_params.itvl = BLE_GAP_SCAN_ITVL_MS(100);
-	disc_params.window = BLE_GAP_SCAN_WIN_MS(10);
+	disc_params.window = BLE_GAP_SCAN_WIN_MS(25);
 	
 	// BLE_GAP_SCAN_SLOW_INTERVAL1 -> Terrible for discovery
 

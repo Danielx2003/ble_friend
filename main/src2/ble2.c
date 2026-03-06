@@ -88,21 +88,13 @@ ble_status_t handle_read_complete(ble_work_read_complete_t *read)
 
   ESP_LOGI(tag, "Received peer public key (%d bytes)", read->data_len);
 
-  crypto_key_t pub_key;
-  crypto_key_t keypair;
+  return BLE_SUCCESS;
+}
 
-  generate_keypair(CRYPTO_CURVE_X25519, &keypair);
-
-  crypto_status_t status =
-      export_public_key(&keypair, &pub_key, 32);
-
-  if (status != CRYPTO_SUCCESS) {
-		ESP_LOGE(tag, "Failed to export public key. Status=%d", status);
-    return BLE_FAIL;
-  }
-
-  const struct peer *peer =
-      peer_find(read->conn_handle);
+ble_status_t write_key_to_peer(ble_work_write_key_t *item)
+{
+	const struct peer *peer =
+	      peer_find(item->conn_handle);
 
   const struct peer_chr *chr =
       peer_chr_find_uuid(
@@ -117,8 +109,8 @@ ble_status_t handle_read_complete(ble_work_read_complete_t *read)
 
   struct os_mbuf *txom =
       ble_hs_mbuf_from_flat(
-          &pub_key.raw.data,
-          pub_key.raw.len);
+				item->pub_key,
+				item->pub_key_len);
 
   if (!txom) {
     ESP_LOGE(tag, "Insufficient memory to create buffer");
@@ -126,7 +118,7 @@ ble_status_t handle_read_complete(ble_work_read_complete_t *read)
   }
 
   int rc = ble_gattc_write_long(
-      read->conn_handle,
+      item->conn_handle,
       chr->chr.val_handle,
       0,
       txom,
@@ -138,7 +130,7 @@ ble_status_t handle_read_complete(ble_work_read_complete_t *read)
     return BLE_FAIL;
   }
 
-  return BLE_SUCCESS;
+	return BLE_SUCCESS;
 }
 
 
