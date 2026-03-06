@@ -1,6 +1,8 @@
 #include "ble_worker2.h"
 #include "crypto2.h"
+#include "crypto_worker2.h"
 #include "request2.h"
+#include "esp_log.h"
 
 /* BLE Worker Task */
 

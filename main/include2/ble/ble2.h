@@ -1,6 +1,7 @@
 #pragma once
 
-#include "ble_worker2.h"
+#include "../ble/ble_worker2.h"
+#include "host/ble_hs.h"
 
 typedef enum {
 	BLE_SUCCESS,

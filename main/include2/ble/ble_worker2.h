@@ -1,7 +1,5 @@
 #pragma once
 
-#include "freertos/FreeRTOS.h"
-#include "host/ble_hs.h"
 #include "nimble/ble.h"
 
 #define BLE_QUEUE_LEN 128

@@ -1,7 +1,7 @@
 #pragma once
 
+#include "../request/request_worker2.h"
 #include "crypto2.h"
-#include "request_worker2.h"
 
 typedef enum {
 	REQUEST_SUCCESS,

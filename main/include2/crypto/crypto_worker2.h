@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../crypto/crypto_worker2.h"
+
 #include "parser2.h"
 
 #define CRYPTO_QUEUE_LEN 128
