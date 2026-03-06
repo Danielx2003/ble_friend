@@ -431,7 +431,7 @@ void test_generate_ecdsa_keypair_signs_and_verifies()
 	psa_set_key_bits(&attr, 256);
 
 	psa_set_key_usage_flags(&attr,
-	   PSA_KEY_USAGE_SIGN_MESSAGE | PSA_KEY_USAGE_VERIFY_MESSAGE
+		PSA_KEY_USAGE_VERIFY_MESSAGE | PSA_KEY_USAGE_SIGN_MESSAGE
 	);
 	psa_set_key_algorithm(&attr, PSA_ALG_ECDSA(PSA_ALG_SHA_256));
 
