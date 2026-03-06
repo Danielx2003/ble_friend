@@ -77,9 +77,13 @@ void ble_worker_task(void *param)
 			    break;
 				case BLE_WORKER_EVENT_READ_COMPLETE:
 			    handle_read_complete(&item.context.read_complete);
-			    break;
+					break;
 				case BLE_WORKER_EVENT_ENC_CHANGE:
 					handle_enc_change(&item.context.connect);
+					break;
+				case BLE_WORKER_EVENT_WRITE_KEY_TO_PEER:
+					write_key_to_peer(&item.context.write_pub_key);
+					break;
 	      default:
 	        break;
 	      }

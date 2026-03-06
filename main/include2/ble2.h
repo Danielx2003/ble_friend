@@ -65,12 +65,13 @@ ble_status_t handle_disc_complete(ble_work_disc_complete_t *disc);
 ble_status_t handle_read_complete(ble_work_read_complete_t *read);
 ble_status_t handle_new_connection(ble_work_connect_t *connect);
 ble_status_t handle_enc_change(ble_work_connect_t *connect);
+ble_status_t write_key_to_peer(ble_work_write_key_t *item);
 
 
 
-bool handle_pairing_msg(ble_work_msg_t *msg, mfg_data_t *mfg);
-bool handle_paired_msg(ble_work_msg_t *msg, mfg_data_t *mfg);
-bool handle_lost_msg(ble_work_msg_t *msg, mfg_data_t *mfg);
+void handle_pairing_msg(ble_work_msg_t *msg, mfg_data_t *mfg);
+void handle_paired_msg(ble_work_msg_t *msg, mfg_data_t *mfg);
+void handle_lost_msg(ble_work_msg_t *msg, mfg_data_t *mfg);
 
 
 /* Public API */

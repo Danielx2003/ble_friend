@@ -16,8 +16,15 @@ typedef enum {
 	BLE_WORKER_EVENT_HOST_RESET,
 	BLE_WORKER_EVENT_DISC_COMPLETE,
 	BLE_WORKER_EVENT_READ_COMPLETE,
+	BLE_WORKER_EVENT_WRITE_KEY_TO_PEER,
 	BLE_WORKER_EVENT_ENC_CHANGE
 } ble_worker_event_t;
+
+typedef struct {
+	uint16_t conn_handle;
+	uint8_t  pub_key[32];
+	size_t pub_key_len;
+} ble_work_write_key_t;
 
 typedef struct {
 	ble_addr_t addr;
@@ -64,6 +71,7 @@ typedef struct {
 		ble_work_disconnect_t disconnect;
 		ble_work_read_complete_t read_complete;
 		ble_work_disc_complete_t disc_complete;
+		ble_work_write_key_t write_pub_key;
 	} context;
 } ble_work_item_t;
 

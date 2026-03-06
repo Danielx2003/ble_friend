@@ -38,7 +38,7 @@ typedef struct {
   uint8_t payload[PAYLOAD_MAX_SIZE];
 } mfg_data_t;
 
-typedef bool (*parser_action_fn)(ble_work_msg_t *msg, mfg_data_t *mfg);
+typedef void (*parser_action_fn)(ble_work_msg_t *msg, mfg_data_t *mfg);
 
 typedef struct {
   parser_action_fn on_pairing;

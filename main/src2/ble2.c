@@ -1,5 +1,6 @@
 #include "ble2.h"
 #include "ble_worker2.h"
+#include "crypto_worker2.h"
 #include "parser2.h"
 #include "crypto2.h"
 #include "request2.h"
@@ -47,82 +48,28 @@ void handle_on_sync(void)
 
 /* Protocol Message Handlers */
 
-bool handle_pairing_msg(ble_work_msg_t *msg, mfg_data_t *mfg)
+void handle_pairing_msg(ble_work_msg_t *msg, mfg_data_t *mfg)
 {
   disc_stop();
   start_connect(msg);
-
-  return true;
 }
 
 
-bool handle_paired_msg(ble_work_msg_t *msg, mfg_data_t *mfg)
+void handle_paired_msg(ble_work_msg_t *msg, mfg_data_t *mfg)
 {
   printf("paired msg\n");
-  return true;
 }
 
-int payloads_received = 0; 
+int payloads_received = 0;
 
 
-bool handle_lost_msg(ble_work_msg_t *msg, mfg_data_t *mfg)
+void handle_lost_msg(ble_work_msg_t *msg, mfg_data_t *mfg)
 {
-	crypto_status_t status;
-	crypto_key_t keypair;
-
-	status = generate_keypair(CRYPTO_CURVE_X25519, &keypair);
-	if (status != CRYPTO_SUCCESS)
-	{
-		return false;
-	}
-
-	crypto_key_t eph_pub_key = {
-		.type = KEY_TYPE_RAW,
-		.raw = {
-			.len = mfg->payload_len
-		}
+	crypto_work_item_t crypto_item = {
+		.type = CRYPTO_WORKER_EVENT_LOST_MSG,
 	};
-	memcpy(eph_pub_key.raw.data, mfg->payload, mfg->payload_len);
-
-	crypto_key_t secret;
-
-	status = generate_secret(
-		&keypair, 
-		&eph_pub_key,
-		&secret
-	);
-	if (status != CRYPTO_SUCCESS)
-	{
-		return false;
-	}
-
-	crypto_key_t aes_key;
-	status = derive_symmetric_aes_key_hkdf(
-		&secret,
-		NULL,
-		NULL,
-		&aes_key
-	);
-	if (status != CRYPTO_SUCCESS)
-	{
-		return false;
-	}
-
-//	request_lost_payload_t payload = {
-//		.finder_key = &eph_pub_key
-//	};
 	
-	// Send Upload Command
-//	request_work_item_t item = {
-//		.type = REQUEST_WORKER_EVENT_UPLOAD_LOST_LOCATION
-//	};
-
-//	printf("upload here...\n");
-//	payloads_received += 1;
-	
-//	xQueueSend(request_worker_queue, &item, 0);
-	
-  return true;
+	xQueueSend(crypto_worker_queue, &crypto_item, 0);
 }
 
 /* Event Handlers */
@@ -141,21 +88,13 @@ ble_status_t handle_read_complete(ble_work_read_complete_t *read)
 
   ESP_LOGI(tag, "Received peer public key (%d bytes)", read->data_len);
 
-  crypto_key_t pub_key;
-  crypto_key_t keypair;
+  return BLE_SUCCESS;
+}
 
-  generate_keypair(CRYPTO_CURVE_X25519, &keypair);
-
-  crypto_status_t status =
-      export_public_key(&keypair, &pub_key);
-
-  if (status != CRYPTO_SUCCESS) {
-		ESP_LOGE(tag, "Failed to export public key. Status=%d", status);
-    return BLE_FAIL;
-  }
-
-  const struct peer *peer =
-      peer_find(read->conn_handle);
+ble_status_t write_key_to_peer(ble_work_write_key_t *item)
+{
+	const struct peer *peer =
+	      peer_find(item->conn_handle);
 
   const struct peer_chr *chr =
       peer_chr_find_uuid(
@@ -170,8 +109,8 @@ ble_status_t handle_read_complete(ble_work_read_complete_t *read)
 
   struct os_mbuf *txom =
       ble_hs_mbuf_from_flat(
-          &pub_key.raw.data,
-          pub_key.raw.len);
+				item->pub_key,
+				item->pub_key_len);
 
   if (!txom) {
     ESP_LOGE(tag, "Insufficient memory to create buffer");
@@ -179,7 +118,7 @@ ble_status_t handle_read_complete(ble_work_read_complete_t *read)
   }
 
   int rc = ble_gattc_write_long(
-      read->conn_handle,
+      item->conn_handle,
       chr->chr.val_handle,
       0,
       txom,
@@ -191,7 +130,7 @@ ble_status_t handle_read_complete(ble_work_read_complete_t *read)
     return BLE_FAIL;
   }
 
-  return BLE_SUCCESS;
+	return BLE_SUCCESS;
 }
 
 
@@ -205,17 +144,13 @@ ble_status_t handle_ext_disc(ble_work_item_t *item)
   };
 
   status = parse_adv_data(
-      item->context.msg.data,
-      item->context.msg.len,
-      &result);
+		item->context.msg.data,
+			item->context.msg.len,
+			&result
+	);
 
-//	status = parse_adv_data_fast(
-//	    item->context.msg.data,
-//	    item->context.msg.len,
-//	    &result);
-
-	payloads_received += 1;	
-//  result.action(&item->context.msg, result.mfg);
+	if (status != CRYPTO_SUCCESS) { return status; }
+  result.action(&item->context.msg, result.mfg);
   return BLE_SUCCESS;
 }
 
@@ -308,13 +243,14 @@ ble_status_t ble_start(void)
     return BLE_ERR_NO_MEMORY;
   }
 	
-	xTaskCreate(
+	xTaskCreatePinnedToCore(
     ble_worker_task,
     "ble_worker",
     16384,
     NULL,
     20,
-    NULL
+    NULL,
+		0
 	);
 
   return BLE_SUCCESS;
