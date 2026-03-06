@@ -20,9 +20,9 @@ void request_worker_task(void *param)
 					batch[batch_count++] = item;
 	
 					if (batch_count >= MAX_BATCH_ITEMS) {
-//					    upload_batch(batch, batch_count);
-					    batch_count = 0;
-					    last_flush = xTaskGetTickCount();
+				    upload_batch(batch, batch_count);
+				    batch_count = 0;
+				    last_flush = xTaskGetTickCount();
 					}
 					break;
 			}
@@ -30,7 +30,7 @@ void request_worker_task(void *param)
 		if (batch_count > 0 &&
 		    (xTaskGetTickCount() - last_flush) >= pdMS_TO_TICKS(BATCH_TIMEOUT_MS)) {
 
-//		    upload_batch(batch, batch_count);
+		    upload_batch(batch, batch_count);
 		    batch_count = 0;
 		    last_flush = xTaskGetTickCount();
 		}

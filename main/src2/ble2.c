@@ -1,5 +1,6 @@
 #include "ble2.h"
 #include "ble_worker2.h"
+#include "crypto2.h"
 #include "crypto_worker2.h"
 #include "parser2.h"
 #include "crypto2.h"
