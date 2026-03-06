@@ -1,5 +1,6 @@
 #include "ble2.h"
 #include "ble_worker2.h"
+#include "crypto_worker2.h"
 #include "parser2.h"
 #include "crypto2.h"
 #include "request2.h"
@@ -47,82 +48,28 @@ void handle_on_sync(void)
 
 /* Protocol Message Handlers */
 
-bool handle_pairing_msg(ble_work_msg_t *msg, mfg_data_t *mfg)
+void handle_pairing_msg(ble_work_msg_t *msg, mfg_data_t *mfg)
 {
   disc_stop();
   start_connect(msg);
-
-  return true;
 }
 
 
-bool handle_paired_msg(ble_work_msg_t *msg, mfg_data_t *mfg)
+void handle_paired_msg(ble_work_msg_t *msg, mfg_data_t *mfg)
 {
   printf("paired msg\n");
-  return true;
 }
 
-int payloads_received = 0; 
+int payloads_received = 0;
 
 
-bool handle_lost_msg(ble_work_msg_t *msg, mfg_data_t *mfg)
+void handle_lost_msg(ble_work_msg_t *msg, mfg_data_t *mfg)
 {
-	crypto_status_t status;
-	crypto_key_t keypair;
-
-	status = generate_keypair(CRYPTO_CURVE_X25519, &keypair);
-	if (status != CRYPTO_SUCCESS)
-	{
-		return false;
-	}
-
-	crypto_key_t eph_pub_key = {
-		.type = KEY_TYPE_RAW,
-		.raw = {
-			.len = mfg->payload_len
-		}
+	crypto_work_item_t crypto_item = {
+		.type = CRYPTO_WORKER_EVENT_LOST_MSG,
 	};
-	memcpy(eph_pub_key.raw.data, mfg->payload, mfg->payload_len);
-
-	crypto_key_t secret;
-
-	status = generate_secret(
-		&keypair, 
-		&eph_pub_key,
-		&secret
-	);
-	if (status != CRYPTO_SUCCESS)
-	{
-		return false;
-	}
-
-	crypto_key_t aes_key;
-	status = derive_symmetric_aes_key_hkdf(
-		&secret,
-		NULL,
-		NULL,
-		&aes_key
-	);
-	if (status != CRYPTO_SUCCESS)
-	{
-		return false;
-	}
-
-//	request_lost_payload_t payload = {
-//		.finder_key = &eph_pub_key
-//	};
 	
-	// Send Upload Command
-//	request_work_item_t item = {
-//		.type = REQUEST_WORKER_EVENT_UPLOAD_LOST_LOCATION
-//	};
-
-//	printf("upload here...\n");
-//	payloads_received += 1;
-	
-//	xQueueSend(request_worker_queue, &item, 0);
-	
-  return true;
+	xQueueSend(crypto_worker_queue, &crypto_item, 0);
 }
 
 /* Event Handlers */
@@ -147,7 +94,7 @@ ble_status_t handle_read_complete(ble_work_read_complete_t *read)
   generate_keypair(CRYPTO_CURVE_X25519, &keypair);
 
   crypto_status_t status =
-      export_public_key(&keypair, &pub_key);
+      export_public_key(&keypair, &pub_key, 32);
 
   if (status != CRYPTO_SUCCESS) {
 		ESP_LOGE(tag, "Failed to export public key. Status=%d", status);
@@ -205,17 +152,13 @@ ble_status_t handle_ext_disc(ble_work_item_t *item)
   };
 
   status = parse_adv_data(
-      item->context.msg.data,
-      item->context.msg.len,
-      &result);
+		item->context.msg.data,
+			item->context.msg.len,
+			&result
+	);
 
-//	status = parse_adv_data_fast(
-//	    item->context.msg.data,
-//	    item->context.msg.len,
-//	    &result);
-
-	payloads_received += 1;	
-//  result.action(&item->context.msg, result.mfg);
+	if (status != CRYPTO_SUCCESS) { return status; }
+  result.action(&item->context.msg, result.mfg);
   return BLE_SUCCESS;
 }
 
@@ -308,13 +251,14 @@ ble_status_t ble_start(void)
     return BLE_ERR_NO_MEMORY;
   }
 	
-	xTaskCreate(
+	xTaskCreatePinnedToCore(
     ble_worker_task,
     "ble_worker",
     16384,
     NULL,
     20,
-    NULL
+    NULL,
+		0
 	);
 
   return BLE_SUCCESS;
