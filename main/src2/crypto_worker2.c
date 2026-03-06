@@ -1,3 +1,4 @@
+#include "ble_worker2.h"
 #include "crypto2.h"
 #include "request2.h"
 
@@ -55,7 +56,42 @@ void handle_lost_msg_crypto(crypto_work_item_t *item)
 
 void handle_read_complete_crypto(crypto_work_item_t *item)
 {
+	crypto_key_t pub_key;
+	crypto_key_t keypair;
+
+	generate_keypair(CRYPTO_CURVE_X25519, &keypair);
+
+	crypto_status_t status =
+	    export_public_key(&keypair, &pub_key, 32);
+
+	if (status != CRYPTO_SUCCESS) {
+		ESP_LOGE("CRYPTO", "Failed to export public key. Status=%d", status);
+	}
+
+  ble_work_item_t ble_item;
+  ble_item.type = BLE_WORKER_EVENT_READ_COMPLETE;
+	memcpy(
+		&ble_item.context.read_complete,
+		&item->context.read_complete,
+		sizeof(item->context.read_complete)
+	);
+
+  if (xQueueSend(ble_worker_queue, &ble_item, portMAX_DELAY) != pdPASS) {
+      ESP_LOGE("CRYPTO", "Failed to send to BLE worker queue");
+  }
 	
+	ble_item.type = BLE_WORKER_EVENT_WRITE_KEY_TO_PEER;
+	ble_item.context.write_pub_key.conn_handle = item->context.read_complete.conn_handle;
+	memcpy(
+		ble_item.context.write_pub_key.pub_key,
+		pub_key.raw.data,
+		pub_key.raw.len
+	);
+	ble_item.context.write_pub_key.pub_key_len = pub_key.raw.len;
+
+	if (xQueueSend(ble_worker_queue, &ble_item, portMAX_DELAY) != pdPASS) {
+	    ESP_LOGE("CRYPTO", "Failed to send to BLE worker queue");
+	}
 }
 
 void crypto_worker_task(void *param)

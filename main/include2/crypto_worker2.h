@@ -31,6 +31,7 @@ typedef struct {
 	crypto_worker_event_t type;
 	union {
 		crypto_work_lost_msg_t lost_msg;
+		crypto_work_read_complete_t read_complete;
 	} context;
 } crypto_work_item_t;
 
