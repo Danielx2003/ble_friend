@@ -28,7 +28,9 @@ typedef CRYPTO_BACKEND_KEY_HANDLE crypto_key_handle_t;
 
 typedef enum {
   KEY_TYPE_ID,
-  KEY_TYPE_RAW
+  KEY_TYPE_RAW,
+	KEY_TYPE_ECDSA_PRIVATE,
+	KEY_TYPE_ECDSA_PRIVATE_PUBLIC
 } key_type_t;
 
 typedef struct {
@@ -83,6 +85,17 @@ crypto_status_t export_public_key(
 crypto_status_t generate_ecdsa_keypair(
 	crypto_key_t *keypair
 );
+
+crypto_status_t export_ecdsa_public_key(
+	crypto_key_t *keypair,
+	crypto_key_t *public_key
+);
+
+crypto_status_t import_ecdsa_key(
+	crypto_key_t *public_key,
+	crypto_key_t *key_out
+);
+
 
 crypto_status_t convert_from_raw_to_id(crypto_key_t *key);
 crypto_status_t convert_from_id_to_raw(crypto_key_t *key);

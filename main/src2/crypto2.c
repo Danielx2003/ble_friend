@@ -412,12 +412,51 @@ crypto_status_t generate_ecdsa_keypair(crypto_key_t *keypair)
   psa_set_key_bits(&attr, 256);
 
 	psa_set_key_usage_flags(&attr,
-	   PSA_KEY_USAGE_SIGN_MESSAGE
+	   PSA_KEY_USAGE_SIGN_MESSAGE | PSA_KEY_USAGE_SIGN_HASH
 	);
 	psa_set_key_algorithm(&attr, PSA_ALG_ECDSA(PSA_ALG_SHA_256));
 
 	status = psa_generate_key(&attr, &(keypair->id));
 	keypair->type = KEY_TYPE_ID;
 
-	return psa_status_to_crypto(PSA_SUCCESS);
+	return psa_status_to_crypto(status);
+}
+
+crypto_status_t export_ecdsa_public_key(
+	crypto_key_t *keypair,
+	crypto_key_t *public_key
+)
+{
+	crypto_status_t status = psa_export_public_key(
+		keypair->id,
+		public_key->raw.data,
+		65,
+		&public_key->raw.len
+	);
+
+	return psa_status_to_crypto(status);
+}
+
+crypto_status_t import_ecdsa_key(
+	crypto_key_t *public_key,
+	crypto_key_t *key_out
+)
+{
+	psa_key_attributes_t attr = PSA_KEY_ATTRIBUTES_INIT;
+	psa_set_key_type(&attr, PSA_KEY_TYPE_ECC_PUBLIC_KEY(PSA_ECC_FAMILY_SECP_K1));
+	psa_set_key_bits(&attr, 256);
+
+	psa_set_key_usage_flags(&attr,
+		PSA_KEY_USAGE_VERIFY_MESSAGE | PSA_KEY_USAGE_VERIFY_HASH
+	);
+	psa_set_key_algorithm(&attr, PSA_ALG_ECDSA(PSA_ALG_SHA_256));
+
+	psa_status_t status = psa_import_key(
+		&attr,
+		public_key->raw.data,
+		public_key->raw.len,
+		&key_out->id
+	);
+	key_out->type = KEY_TYPE_ID;
+	return psa_status_to_crypto(status);
 }
