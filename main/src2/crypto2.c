@@ -1,5 +1,6 @@
 #include "crypto2.h"
 #include "crypto_worker2.h"
+
 #include "psa/crypto.h"
 #include "psa/crypto_types.h"
 #include "psa/crypto_values.h"
@@ -459,4 +460,41 @@ crypto_status_t import_ecdsa_key(
 	);
 	key_out->type = KEY_TYPE_ID;
 	return psa_status_to_crypto(status);
+}
+
+crypto_status_t sign_message(
+	crypto_key_t *ecdsa_private_key,
+	crypto_message_t *message,
+	uint8_t *signature,
+	size_t signature_len,
+	size_t *signature_size
+)
+{
+	psa_status_t status;
+
+	uint8_t hash[256];
+	size_t hash_len;
+
+	status = psa_hash_compute(
+	    PSA_ALG_SHA_256,
+	    message->message,
+	    message->message_size,
+	    hash,
+	    sizeof(hash),
+	    &hash_len
+	);
+	if (status != PSA_SUCCESS) { return psa_status_to_crypto(status); }
+
+	status = psa_sign_hash(
+	    ecdsa_private_key->id,
+	    PSA_ALG_ECDSA(PSA_ALG_SHA_256),
+	    hash,
+	    hash_len,
+	    signature,
+	    signature_len,
+			signature_size
+	);
+	if (status != PSA_SUCCESS) { return psa_status_to_crypto(status); }
+
+	return CRYPTO_SUCCESS;
 }

@@ -44,6 +44,11 @@ typedef struct {
 	};
 } crypto_key_t;
 
+typedef struct {
+	uint8_t *message;
+	size_t message_size;
+} crypto_message_t;
+
 crypto_status_t crypto_init();
 
 crypto_status_t generate_keypair(
@@ -96,6 +101,13 @@ crypto_status_t import_ecdsa_key(
 	crypto_key_t *key_out
 );
 
+crypto_status_t sign_message(
+	crypto_key_t *ecdsa_private_key,
+	crypto_message_t *message,
+	uint8_t *signature,
+	size_t signature_len,
+	size_t *signature_size
+);
 
 crypto_status_t convert_from_raw_to_id(crypto_key_t *key);
 crypto_status_t convert_from_id_to_raw(crypto_key_t *key);
