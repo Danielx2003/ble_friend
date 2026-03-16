@@ -4,4 +4,4 @@
 
 idf_component_register(SRCS "main.c" "src2/ble2.c" "src2/ble_worker2.c" "src2/device2.c" "src2/disc2.c" "src2/parser2.c" "src2/crypto2.c" "src2/request2.c" "src2/request_worker.c" "src2/crypto_worker2.c"
                     INCLUDE_DIRS "." "./include2/ble" "./include2/crypto" "./include2/parser" "./include2/misc" "./include2/request"
-                    REQUIRES bt nvs_flash mbedtls esp_http_client)
+                    REQUIRES bt nvs_flash mbedtls esp_http_client driver)
