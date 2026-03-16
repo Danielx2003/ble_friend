@@ -1,8 +1,13 @@
 #include "ble_worker2.h"
 #include "crypto2.h"
 #include "crypto_worker2.h"
+#include "device2.h"
+#include "psa/crypto_compat.h"
+#include "psa/crypto_values.h"
 #include "request2.h"
+
 #include "esp_log.h"
+#include <stddef.h>
 
 /* BLE Worker Task */
 
@@ -44,9 +49,11 @@ void handle_lost_msg_crypto(crypto_work_item_t *item)
 	);
 	if (status != CRYPTO_SUCCESS) { return; }
 	
-//	request_lost_payload_t payload = {
-//		.finder_key = &eph_pub_key
-//	};
+	// Encrypt location
+	// Sign whole payload
+	// Send to be uploaded
+	
+	
 
 	//	Send Upload Command
 	request_work_item_t request_item = {
@@ -98,7 +105,28 @@ void handle_read_complete_crypto(crypto_work_item_t *item)
 
 void crypto_worker_task(void *param)
 {
-	printf("starting crypto task\n");
+	crypto_status_t status;
+	printf("Key Length Before: %d\n", ecdsa_public_key.raw.len);
+	
+	if (psa_open_key(ECDSA_PRIV_KEY_ID, &ecdsa_private_key.id) != PSA_SUCCESS)
+	{
+		status = generate_ecdsa_keypair(&ecdsa_private_key);
+		if (status != CRYPTO_SUCCESS) { printf("failed to generate keypair!\n"); }
+	}
+
+//	if (!is_ecdsa_keypair_in_storage())
+//	{
+//		status = export_ecdsa_public_key(
+//			&ecdsa_private_key,
+//			&ecdsa_public_key
+//		);
+//		if (status != CRYPTO_SUCCESS) {  printf("failed to export public key!\n"); }
+//
+//		write_ecdsa_public_key_to_storage(&ecdsa_public_key);
+//	}
+//	
+//	load_ecdsa_public_key_from_storage(&ecdsa_public_key);
+	
   crypto_work_item_t item;
 
   while(1) {

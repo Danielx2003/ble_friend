@@ -13,6 +13,8 @@
 
 static uint8_t counter = 1;
 QueueHandle_t crypto_worker_queue = NULL;
+crypto_key_t ecdsa_private_key = {0};
+crypto_key_t ecdsa_public_key = {0};
 
 /* Static Functions */
 
@@ -45,11 +47,12 @@ crypto_status_t psa_status_to_crypto(psa_status_t status)
 		default:
 			return CRYPTO_ERR_UNKNOWN;
 	}
-
 }
 
 crypto_status_t crypto_init()
 {
+	psa_status_t status = psa_crypto_init();
+	
 	crypto_worker_queue =
 	    xQueueCreate(128, sizeof(crypto_work_item_t));
 
@@ -67,7 +70,7 @@ crypto_status_t crypto_init()
 		1
 	);
 
-	return psa_status_to_crypto(psa_crypto_init());
+	return PSA_SUCCESS;
 }
 
 crypto_status_t generate_keypair(
@@ -408,16 +411,26 @@ crypto_status_t generate_ecdsa_keypair(crypto_key_t *keypair)
 {
 	psa_key_attributes_t attr = PSA_KEY_ATTRIBUTES_INIT;
 	psa_status_t status;
+	
+	mbedtls_svc_key_id_t key_id = mbedtls_svc_key_id_make(1, 53);  
 
-  psa_set_key_type(&attr, PSA_KEY_TYPE_ECC_KEY_PAIR(PSA_ECC_FAMILY_SECP_K1));
-  psa_set_key_bits(&attr, 256);
-
+	psa_set_key_lifetime(&attr, PSA_KEY_LIFETIME_PERSISTENT);
 	psa_set_key_usage_flags(&attr,
 	   PSA_KEY_USAGE_SIGN_MESSAGE | PSA_KEY_USAGE_SIGN_HASH
 	);
+	psa_set_key_id(&attr, key_id);
+  psa_set_key_type(&attr, PSA_KEY_TYPE_ECC_KEY_PAIR(PSA_ECC_FAMILY_SECP_K1));
 	psa_set_key_algorithm(&attr, PSA_ALG_ECDSA(PSA_ALG_SHA_256));
-
+  psa_set_key_bits(&attr, 256);
+	
 	status = psa_generate_key(&attr, &(keypair->id));
+	printf("status: %ld\n", status);
+	
+	psa_key_attributes_t attr2 = PSA_KEY_ATTRIBUTES_INIT;
+	psa_get_key_attributes(keypair->id, &attr2);
+	
+	printf("%d\n", PSA_KEY_LIFETIME_GET_PERSISTENCE(psa_get_key_lifetime(&attr2)));
+	
 	keypair->type = KEY_TYPE_ID;
 
 	return psa_status_to_crypto(status);

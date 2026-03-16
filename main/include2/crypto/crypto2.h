@@ -9,6 +9,7 @@
 #define P256_KEY_BITS   256
 
 #define CRYPTO_BACKEND_KEY_HANDLE psa_key_id_t
+#define ECDSA_PRIV_KEY_ID ((psa_key_id_t)0x00000010)
 
 void curve25519_clamp(uint8_t k[32]);
 
@@ -112,3 +113,5 @@ crypto_status_t sign_message(
 crypto_status_t convert_from_raw_to_id(crypto_key_t *key);
 crypto_status_t convert_from_id_to_raw(crypto_key_t *key);
 
+extern crypto_key_t ecdsa_private_key;
+extern crypto_key_t ecdsa_public_key;

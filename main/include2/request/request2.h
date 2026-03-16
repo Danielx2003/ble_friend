@@ -3,6 +3,8 @@
 #include "request_worker2.h"
 #include "crypto2.h"
 
+#define MAX_BATCH_ITEMS 20
+
 typedef enum {
 	REQUEST_SUCCESS,
 	REQUEST_ERR_INIT,
@@ -11,11 +13,9 @@ typedef enum {
 } request_status_t;
 
 typedef struct {
-	char device_id[36];
-	uint8_t location[2]; // Filler until we decide how we get location
-	crypto_key_t *finder_key; // Public key that encrypted the report
-	uint8_t signature[64];
-} request_lost_payload_t;
+	size_t size;
+	request_lost_payload_t payloads[MAX_BATCH_ITEMS];
+} request_lost_batch_wire_t;
 
 typedef struct {
 	char device_id[36];
@@ -35,7 +35,7 @@ typedef struct {
 
 /* Public API */
 
-request_status_t upload_batch(request_work_item_t *batch, size_t batch_len);
+request_status_t upload_lost_batch(request_lost_payload_t *batch, size_t batch_len);
 
 /*
 POST
