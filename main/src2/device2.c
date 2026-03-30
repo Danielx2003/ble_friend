@@ -1,10 +1,12 @@
 #include "device2.h"
+#include "crypto2.h"
+#include "esp_err.h"
+#include "nvs.h"
 #include "wifi_password.h"
 
 #include "nvs_flash.h"
 #include "esp_wifi.h"
 #include "esp_log.h"
-
 
 static EventGroupHandle_t s_wifi_event_group;
 static const char *TAG = "wifi";
@@ -18,7 +20,6 @@ static void wifi_event_handler(void *arg,
                                void *event_data)
 {
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
-      esp_wifi_connect();
     } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
 				xEventGroupSetBits(s_wifi_event_group, WIFI_FAIL_BIT);
 		} else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
@@ -27,9 +28,53 @@ static void wifi_event_handler(void *arg,
     }
 }
 
+bool is_ecdsa_keypair_in_storage()
+{
+	nvs_handle_t handle;
+	nvs_type_t type;
+	esp_err_t err;
+	
+	err = nvs_open("crypto", NVS_READONLY, &handle);
+	esp_err_t found_ecdsa_pub = nvs_find_key(handle, NVS_ECDSA_PUB_KEY, &type);
+
+	bool found = 
+		err == ESP_ERR_NVS_NOT_FOUND 
+		|| found_ecdsa_pub == ESP_ERR_NVS_NOT_FOUND ? false 
+		: true;
+
+	nvs_close(handle);
+
+	return found;
+}
+
+void write_ecdsa_public_key_to_storage(
+	crypto_key_t *ecdsa_public_key
+)
+{
+	nvs_handle_t handle;
+
+	esp_err_t err = nvs_open("crypto", NVS_READWRITE, &handle);
+	if (err != ESP_OK) { return; }
+	nvs_set_blob(handle, NVS_ECDSA_PUB_KEY, ecdsa_public_key->raw.data, ecdsa_public_key->raw.len);
+	nvs_commit(handle);
+	nvs_close(handle);
+}
+
+void load_ecdsa_public_key_from_storage(
+	crypto_key_t *ecdsa_public_key
+)
+{
+	nvs_handle_t handle;
+
+	esp_err_t err = nvs_open("crypto", NVS_READONLY, &handle);
+	if (err != ESP_OK) { return; }
+	nvs_get_blob(handle, NVS_ECDSA_PUB_KEY, ecdsa_public_key->raw.data, &ecdsa_public_key->raw.len);
+	nvs_close(handle);
+}
+
 bool device_init()
 {
-//	s_wifi_event_group = xEventGroupCreate();
+	s_wifi_event_group = xEventGroupCreate();
 
 	esp_err_t ret = nvs_flash_init();
 	if  (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
@@ -69,9 +114,17 @@ bool device_init()
 //      },
 //  };
 //
+////	wifi_config_t wifi_config = {
+////	    .sta = {
+////	        .ssid = "eduroam",
+////	        .password = "my_password",
+////					.threshold.authmode = WIFI_AUTH_WPA2_ENTERPRISE,
+////	    },
+////	};
+//
 //  ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
 //  ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
-//  ESP_ERROR_CHECK(esp_wifi_start());
+//	ESP_ERROR_CHECK(esp_wifi_start());
 //
 //  ESP_LOGI(TAG, "WiFi init finished.");
 //	
@@ -92,7 +145,6 @@ bool device_init()
 //	  ESP_LOGE("wifi", "Failed to connect");
 //	  return true;
 //	}
-	
-  
+//  
   return true;
 }
