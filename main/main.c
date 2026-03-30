@@ -13,16 +13,9 @@ static parser_action_table_t ble_actions = {
 RTC_SLOW_ATTR struct timeval disc_start_time = {0};
 
 #include "esp_wifi.h"
-#include <sys/time.h>
 
 void test_scan_nearby_aps()
 {	
-//	wifi_scan_config_t scan_config = {};  // Configuration for scanning
-//	scan_config.ssid = NULL;  // Scan all networks (no specific SSID)
-//	scan_config.bssid = NULL;  // Scan all BSSIDs
-//	scan_config.channel = 0;  // Scan all channels
-//	scan_config.show_hidden = true;  // Show hidden networksf
-
 	wifi_scan_config_t scan_config = {
 	    .ssid = NULL,
 	    .bssid = NULL,
