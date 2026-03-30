@@ -4,15 +4,13 @@
 #include "parser2.h"
 #include "request2.h"
 
+#include "esp_wifi.h"
+
 static parser_action_table_t ble_actions = {
   .on_pairing = handle_pairing_msg,
   .on_paired = handle_paired_msg,
   .on_lost = handle_lost_msg
 };
-
-RTC_SLOW_ATTR struct timeval disc_start_time = {0};
-
-#include "esp_wifi.h"
 
 void test_scan_nearby_aps()
 {	
@@ -27,16 +25,9 @@ void test_scan_nearby_aps()
 //	        .max = 60
 //	    }
 	};
-  struct timeval scan_enter_time;
-  gettimeofday(&scan_enter_time, NULL);
-	
+
 	// Perform the Wi-Fi scan
 	esp_wifi_scan_start(&scan_config, true);  // true = blocking scan
-	
-	struct timeval now;
-	gettimeofday(&now, NULL);
-	int duration = (now.tv_sec - scan_enter_time.tv_sec) * 1000 + (now.tv_usec - scan_enter_time.tv_usec) / 1000;
-	printf("scan took: %d\n", duration);
 
 	// Get the results of the scan
 	uint16_t num_networks = 0;
@@ -53,7 +44,7 @@ void test_scan_nearby_aps()
 
 	    for (int j = 0; j < 6; j++) {
 	        printf("%02X", networks[i].bssid[j]);
-	        if (j < 5) printf(":");  // Add colon between bytes
+	        if (j < 5) printf(":");
 	    }
 
 	    printf(" | Signal Strength (RSSI): ");
@@ -78,6 +69,4 @@ void app_main()
 
 	ble_init();
 	ble_start();
-	
-	gettimeofday(&disc_start_time, NULL);
 }

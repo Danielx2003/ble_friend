@@ -1,9 +1,8 @@
 #pragma once
 
 #include "request_worker2.h"
-#include "crypto2.h"
 
-#define MAX_BATCH_ITEMS 20
+#define MAX_BATCH_ITEMS 32
 
 typedef enum {
 	REQUEST_SUCCESS,
@@ -26,12 +25,14 @@ typedef struct {
 } request_lost_wire_t;
 
 typedef struct {
-	crypto_key_t *ecdsa_public_key;
-} request_ecdsa_payload_t;
+	uint8_t bssid[6];
+	int8_t rssi;
+} my_wifi_ap_record_t;
 
 typedef struct {
-	char uuid[36];
-} request_ecdsa_response_t;
+	uint8_t number_aps;
+	my_wifi_ap_record_t aps[3];
+} request_device_location_payload_t;
 
 /* Public API */
 
@@ -43,6 +44,8 @@ Upload finders public key, encrypted lost message
 */
 request_status_t upload_lost_details(request_lost_payload_t *payload);
 
+request_status_t get_device_location_from_bssid(request_device_location_payload_t *payload);
+
 /*
 GET
 Owner requests all location's with the given public key
@@ -50,9 +53,6 @@ Then he can decrypt - which can be done elsewhere(?)
 */
 request_status_t get_all_locations();
 
-request_status_t send_ecdsa_public_key(
-	request_ecdsa_payload_t *payload,
-	request_ecdsa_response_t *response);
 
 /*
 Start Request Task/Qeueue
