@@ -134,10 +134,6 @@ ble_status_t write_key_to_peer(ble_work_write_key_t *item)
 	return BLE_SUCCESS;
 }
 
-#include "esp_system.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/time.h>
 
 ble_status_t handle_ext_disc(ble_work_item_t *item)
 {
@@ -155,20 +151,6 @@ ble_status_t handle_ext_disc(ble_work_item_t *item)
 	);
 
 	if (status != CRYPTO_SUCCESS) { return status; }
-	
-	struct timeval now;
-	gettimeofday(&now, NULL);
-	int sleep_time_ms = (now.tv_sec - disc_start_time.tv_sec) * 1000 + (now.tv_usec - disc_start_time.tv_usec) / 1000;
-	ESP_LOGE("RESULT", "Time till discovery: %d\n", sleep_time_ms);
-
-	srand(time(NULL));
-
-	// Generate a random number between 1 and 5000
-	int random_number = (rand() % 5000) + 1;
-
-	vTaskDelay(pdMS_TO_TICKS(random_number));
-
-	esp_restart();
 	
   result.action(&item->context.msg, result.mfg);
   return BLE_SUCCESS;
