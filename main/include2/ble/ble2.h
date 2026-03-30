@@ -3,6 +3,8 @@
 #include "../ble/ble_worker2.h"
 #include "host/ble_hs.h"
 
+extern RTC_SLOW_ATTR struct timeval disc_start_time;
+
 typedef enum {
 	BLE_SUCCESS,
 	BLE_ERR_NO_MEMORY,

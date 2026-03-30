@@ -238,7 +238,7 @@ ble_status_t disc_start(ble_disc_params_t *params,
 	disc_params.filter_duplicates = 0;
   disc_params.passive = params->passive;
   disc_params.itvl = BLE_GAP_SCAN_ITVL_MS(100);
-	disc_params.window = BLE_GAP_SCAN_WIN_MS(25);
+	disc_params.window = BLE_GAP_SCAN_WIN_MS(75);
 	
 	// BLE_GAP_SCAN_SLOW_INTERVAL1 -> Terrible for discovery
 
@@ -254,7 +254,7 @@ ble_status_t disc_start(ble_disc_params_t *params,
   duration = (duration == 0) ? BLE_HS_FOREVER : duration;
 
   rc = ble_gap_disc(own_addr_type,
-                    60000, // 2 mins = 120000, 1 min = 60000
+                    BLE_HS_FOREVER, // 2 mins = 120000, 1 min = 60000
                     &disc_params,
                     disc_cb,
                     NULL);

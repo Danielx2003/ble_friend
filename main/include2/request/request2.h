@@ -14,6 +14,16 @@ typedef struct {
 	uint8_t location; // Filler until we decide how we get location
 } request_lost_payload_t;
 
+typedef struct {
+	uint8_t bssid[6];
+	int8_t rssi;
+} my_wifi_ap_record_t;
+
+typedef struct {
+	uint8_t number_aps;
+	my_wifi_ap_record_t aps[3];
+} request_device_location_payload_t;
+
 /* Public API */
 
 request_status_t upload_batch(request_work_item_t *batch, size_t batch_len);
@@ -24,12 +34,15 @@ Upload finders public key, encrypted lost message
 */
 request_status_t upload_lost_details(request_lost_payload_t *payload);
 
+request_status_t get_device_location_from_bssid(request_device_location_payload_t *payload);
+
 /*
 GET
 Owner requests all location's with the given public key
 Then he can decrypt - which can be done elsewhere(?)
 */
 request_status_t get_all_locations();
+
 
 /*
 Start Request Task/Qeueue
