@@ -1,17 +1,29 @@
 #include "ble_worker2.h"
 #include "crypto2.h"
 #include "crypto_worker2.h"
+#include "freertos/idf_additions.h"
+#include "psa/crypto_values.h"
 #include "request2.h"
-#include "esp_log.h"
 
-/* BLE Worker Task */
+#include "esp_log.h"
+#include <stddef.h>
+
+/* Crypto Worker Task */
 
 void handle_lost_msg_crypto(crypto_work_item_t *item)
 {
 	crypto_status_t status;
-	crypto_key_t keypair;
+	crypto_key_t finder_keypair;
 
-	status = generate_keypair(CRYPTO_CURVE_X25519, &keypair);
+	status = generate_keypair(CRYPTO_CURVE_X25519, &finder_keypair); // Replace with actual private key later
+	if (status != CRYPTO_SUCCESS) { return; }
+	
+	crypto_key_t finder_public_key;
+	status = export_public_key(
+		&finder_keypair,
+		&finder_public_key,
+		32
+	);
 	if (status != CRYPTO_SUCCESS) { return; }
 
 	crypto_key_t eph_pub_key = {
@@ -29,7 +41,7 @@ void handle_lost_msg_crypto(crypto_work_item_t *item)
 	crypto_key_t secret;
 
 	status = generate_secret(
-		&keypair, 
+		&finder_keypair, 
 		&eph_pub_key,
 		&secret
 	);
@@ -39,21 +51,69 @@ void handle_lost_msg_crypto(crypto_work_item_t *item)
 	status = derive_symmetric_aes_key_hkdf(
 		&secret,
 		NULL,
+		0,
 		NULL,
+		0,
 		&aes_key
 	);
 	if (status != CRYPTO_SUCCESS) { return; }
 	
-//	request_lost_payload_t payload = {
-//		.finder_key = &eph_pub_key
-//	};
+	// Encrypt location
+	uint8_t location_plaintext[] = {0x04, 0x05}; // Replace with a get_location function
+	uint8_t location_enc[128];
+	uint8_t nonce[12] = {0};
+	size_t ciphertext_len;
+
+	status = psa_aead_encrypt(
+	  aes_key.id,
+	  PSA_ALG_GCM,
+	  nonce, sizeof(nonce),
+	  NULL, 0,
+	  location_plaintext, sizeof(location_plaintext),
+	  location_enc, sizeof(location_enc),
+	  &ciphertext_len
+	);
+	if (status != PSA_SUCCESS) {  return; }
+	
+	// Sign whole payload
+	crypto_message_t msg = {
+		.message = location_enc,
+		.message_size = ciphertext_len
+	};
+
+	uint8_t signature[64];
+	size_t signature_size;
+
+	status = sign_message(
+		&ecdsa_private_key,
+		&msg,
+		signature,
+		64,
+		&signature_size
+	);
+	if (status != CRYPTO_SUCCESS) { return; }
 
 	//	Send Upload Command
+	
+	request_lost_payload_t lost_payload;
+	lost_payload.encryption_location_len = ciphertext_len;
+	memcpy(lost_payload.device_id, device_uuid, sizeof(device_uuid));
+	memcpy(lost_payload.encrypted_location, location_enc, ciphertext_len);
+	memcpy(&lost_payload.finder_key_raw, &finder_public_key.raw.data, finder_public_key.raw.len);
+	memcpy(&lost_payload.lost_eph_pub_key_raw, &eph_pub_key.raw.data, eph_pub_key.raw.len);
+	memcpy(lost_payload.signature, signature, signature_size);
+	
 	request_work_item_t request_item = {
-		.type = REQUEST_WORKER_EVENT_UPLOAD_LOST_LOCATION,
+		.type = REQUEST_WORKER_EVENT_UPLOAD_LOST_LOCATION
 	};
+	memcpy(&request_item.lost_payload, &lost_payload, sizeof(request_lost_payload_t));
+	
 	
 	xQueueSend(request_worker_queue, &request_item, 0);
+
+	psa_destroy_key(aes_key.id);
+	psa_destroy_key(secret.id);
+	psa_destroy_key(finder_keypair.id);
 }
 
 void handle_read_complete_crypto(crypto_work_item_t *item)
@@ -98,11 +158,15 @@ void handle_read_complete_crypto(crypto_work_item_t *item)
 
 void crypto_worker_task(void *param)
 {
-	printf("starting crypto task\n");
+	crypto_status_t status;
+	
+	status = generate_ecdsa_keypair(&ecdsa_private_key);
+	if (status != CRYPTO_SUCCESS) { printf("failed to generate keypair!\n"); }
   crypto_work_item_t item;
 
   while(1) {
 	  if(xQueueReceive(crypto_worker_queue, &item, portMAX_DELAY)) {
+			vTaskDelay(pdMS_TO_TICKS(10000));
 	    switch(item.type) {
 				case CRYPTO_WORKER_EVENT_LOST_MSG:
 					handle_lost_msg_crypto(&item);

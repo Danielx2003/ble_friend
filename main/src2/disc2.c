@@ -238,9 +238,8 @@ ble_status_t disc_start(ble_disc_params_t *params,
 	disc_params.filter_duplicates = 0;
   disc_params.passive = params->passive;
   disc_params.itvl = BLE_GAP_SCAN_ITVL_MS(100);
-	disc_params.window = BLE_GAP_SCAN_WIN_MS(75);
+	disc_params.window = BLE_GAP_SCAN_WIN_MS(100);
 	
-	// BLE_GAP_SCAN_SLOW_INTERVAL1 -> Terrible for discovery
 
   rc = ble_hs_id_infer_auto(0, &own_addr_type);
   if (rc != 0)
@@ -280,8 +279,6 @@ ble_status_t disc_stop()
 	  ESP_LOGE(tag, "Failed to cancel discovery rc=%d", rc);
 	  return -1;
 	}
-	
-	printf("stopped discovery\n");
 
 	return BLE_SUCCESS;
 }

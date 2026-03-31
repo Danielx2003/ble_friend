@@ -9,6 +9,7 @@
 #define P256_KEY_BITS   256
 
 #define CRYPTO_BACKEND_KEY_HANDLE psa_key_id_t
+#define ECDSA_PRIV_KEY_ID ((psa_key_id_t)0x00000010)
 
 void curve25519_clamp(uint8_t k[32]);
 
@@ -30,7 +31,8 @@ typedef enum {
   KEY_TYPE_ID,
   KEY_TYPE_RAW,
 	KEY_TYPE_ECDSA_PRIVATE,
-	KEY_TYPE_ECDSA_PRIVATE_PUBLIC
+	KEY_TYPE_ECDSA_PRIVATE_PUBLIC,
+	KEY_TYPE_AES_KEY
 } key_type_t;
 
 typedef struct {
@@ -43,6 +45,12 @@ typedef struct {
 	  } raw;
 	};
 } crypto_key_t;
+
+
+typedef struct {
+	uint8_t *message;
+	size_t message_size;
+} crypto_message_t;
 
 crypto_status_t crypto_init();
 
@@ -72,7 +80,9 @@ crypto_status_t derive_ephemeral_private_key(
 crypto_status_t derive_symmetric_aes_key_hkdf(
 	crypto_key_t *secret,
 	uint8_t *salt,
+	size_t salt_len,
 	uint8_t *info,
+	size_t info_len,
 	crypto_key_t *aes_key
 );
 
@@ -96,7 +106,16 @@ crypto_status_t import_ecdsa_key(
 	crypto_key_t *key_out
 );
 
+crypto_status_t sign_message(
+	crypto_key_t *ecdsa_private_key,
+	crypto_message_t *message,
+	uint8_t *signature,
+	size_t signature_len,
+	size_t *signature_size
+);
 
 crypto_status_t convert_from_raw_to_id(crypto_key_t *key);
 crypto_status_t convert_from_id_to_raw(crypto_key_t *key);
 
+extern crypto_key_t ecdsa_private_key;
+extern crypto_key_t ecdsa_public_key;

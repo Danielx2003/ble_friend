@@ -2,7 +2,11 @@
 
 #include "request_worker2.h"
 
-#define MAX_BATCH_ITEMS 32
+#include "crypto2.h"
+
+#define MAX_BATCH_ITEMS 20
+
+extern char device_uuid[36];
 
 typedef enum {
 	REQUEST_SUCCESS,
@@ -34,6 +38,14 @@ typedef struct {
 	my_wifi_ap_record_t aps[3];
 } request_device_location_payload_t;
 
+typedef struct {
+	crypto_key_t *ecdsa_public_key;
+} request_ecdsa_payload_t;
+
+typedef struct {
+	char uuid[36];
+} request_ecdsa_response_t;
+
 /* Public API */
 
 request_status_t upload_lost_batch(request_lost_payload_t *batch, size_t batch_len);
@@ -53,6 +65,9 @@ Then he can decrypt - which can be done elsewhere(?)
 */
 request_status_t get_all_locations();
 
+request_status_t send_ecdsa_public_key(
+	request_ecdsa_payload_t *payload,
+	request_ecdsa_response_t *response);
 
 /*
 Start Request Task/Qeueue

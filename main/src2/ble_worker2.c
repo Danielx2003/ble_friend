@@ -66,21 +66,25 @@ void ble_worker_task(void *param)
 					handle_ext_disc(&item);
 					break;
 				case BLE_WORKER_EVENT_CONNECT:
+					printf("connectyed to device event\n");
 					handle_on_connect(&(item));
 					break;
 				case BLE_WORKER_EVENT_DISCONNECT:
+					printf("Disconnected from device event\n");
 					handle_on_disconnect();	
 				break;
 				case BLE_WORKER_EVENT_DISC_COMPLETE:
 			    handle_disc_complete(&item.context.disc_complete);
 			    break;
 				case BLE_WORKER_EVENT_READ_COMPLETE:
+					printf("read complete event\n");
 			    handle_read_complete(&item.context.read_complete);
 					break;
 				case BLE_WORKER_EVENT_ENC_CHANGE:
 					handle_enc_change(&item.context.connect);
 					break;
 				case BLE_WORKER_EVENT_WRITE_KEY_TO_PEER:
+					printf("Write public key to other device event\n");
 					write_key_to_peer(&item.context.write_pub_key);
 					break;
 	      default:

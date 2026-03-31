@@ -5,12 +5,13 @@
 #include "parser2.h"
 #include "crypto2.h"
 #include "request2.h"
+#include "request_worker2.h"
 
 #include "esp_log.h"
 #include "host/ble_gap.h"
 #include "esp_central.h"
 #include "freertos/idf_additions.h"
-#include "request_worker2.h"
+#include <sys/time.h>
 
 #include <stdio.h>
 
@@ -51,6 +52,7 @@ void handle_on_sync(void)
 
 void handle_pairing_msg(ble_work_msg_t *msg, mfg_data_t *mfg)
 {
+	printf("pairing msg receive\n");
   disc_stop();
   start_connect(msg);
 }
@@ -130,10 +132,16 @@ ble_status_t write_key_to_peer(ble_work_write_key_t *item)
     ESP_LOGE(tag, "Failed to write characteristic; rc=%d\n", rc);
     return BLE_FAIL;
   }
+	
+	ESP_LOGE(tag, "Wrote public key to other device\n");
 
 	return BLE_SUCCESS;
 }
 
+#include "esp_system.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
 
 ble_status_t handle_ext_disc(ble_work_item_t *item)
 {
@@ -151,8 +159,9 @@ ble_status_t handle_ext_disc(ble_work_item_t *item)
 	);
 
 	if (status != CRYPTO_SUCCESS) { return status; }
-	
+
   result.action(&item->context.msg, result.mfg);
+	
   return BLE_SUCCESS;
 }
 

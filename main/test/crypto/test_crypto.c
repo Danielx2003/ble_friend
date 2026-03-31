@@ -224,7 +224,8 @@ void test_derive_symmetric_aes_key()
 
 	status = derive_symmetric_aes_key_hkdf(
 	&secret,		
-	NULL, NULL,
+	NULL, 0,
+	NULL, 0,
 		&aes_key
 	);
 	TEST_ASSERT_TRUE(status == CRYPTO_SUCCESS);
@@ -277,7 +278,8 @@ void test_enc_roundtrip()
 	
 	TEST_ASSERT_TRUE(derive_symmetric_aes_key_hkdf(
 		&finder_shared_secret,		
-		NULL, NULL,
+		NULL, 0, 
+		NULL, 0,
 			&aes_key
 	) == CRYPTO_SUCCESS);
 	

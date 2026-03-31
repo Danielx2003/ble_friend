@@ -1,5 +1,6 @@
 #include "crypto2.h"
 #include "crypto_worker2.h"
+
 #include "psa/crypto.h"
 #include "psa/crypto_types.h"
 #include "psa/crypto_values.h"
@@ -12,6 +13,8 @@
 
 static uint8_t counter = 1;
 QueueHandle_t crypto_worker_queue = NULL;
+crypto_key_t ecdsa_private_key = {0};
+crypto_key_t ecdsa_public_key = {0};
 
 /* Static Functions */
 
@@ -44,11 +47,12 @@ crypto_status_t psa_status_to_crypto(psa_status_t status)
 		default:
 			return CRYPTO_ERR_UNKNOWN;
 	}
-
 }
 
 crypto_status_t crypto_init()
 {
+	psa_status_t status = psa_crypto_init();
+	
 	crypto_worker_queue =
 	    xQueueCreate(128, sizeof(crypto_work_item_t));
 
@@ -66,7 +70,7 @@ crypto_status_t crypto_init()
 		1
 	);
 
-	return psa_status_to_crypto(psa_crypto_init());
+	return PSA_SUCCESS;
 }
 
 crypto_status_t generate_keypair(
@@ -306,11 +310,14 @@ crypto_status_t derive_public_key(
 crypto_status_t derive_symmetric_aes_key_hkdf(
 	crypto_key_t *secret,
 	uint8_t *salt,
+	size_t salt_len,
 	uint8_t *info,
+	size_t into_len,
 	crypto_key_t *aes_key
 )
 {
 	psa_status_t status;
+	psa_crypto_init();
 
   psa_key_derivation_operation_t deriv =
       PSA_KEY_DERIVATION_OPERATION_INIT;
@@ -319,13 +326,13 @@ crypto_status_t derive_symmetric_aes_key_hkdf(
       &deriv,
       PSA_ALG_HKDF(PSA_ALG_SHA_256)
   );
-	if (status != PSA_SUCCESS) { goto cleanup; }
+	if (status != PSA_SUCCESS) { printf("setup failed: %ld\n", status); goto cleanup; }
 
   status = psa_key_derivation_input_bytes(
       &deriv,
       PSA_KEY_DERIVATION_INPUT_SALT,
       salt,
-      salt == NULL ? 0 : sizeof(salt) - 1
+			salt_len
   );
 	if (status != PSA_SUCCESS) { goto cleanup; }
 
@@ -341,11 +348,11 @@ crypto_status_t derive_symmetric_aes_key_hkdf(
       &deriv,
       PSA_KEY_DERIVATION_INPUT_INFO,
       info,
-      info == NULL ? 0 : sizeof(info) - 1
+			into_len
   );
 	if (status != PSA_SUCCESS) { goto cleanup; }
 
-  uint8_t finder_sym_bytes[32];
+  uint8_t finder_sym_bytes[32]; // 32 Bytes = 256 bits
 
   status = psa_key_derivation_output_bytes(
       &deriv,
@@ -369,7 +376,7 @@ crypto_status_t derive_symmetric_aes_key_hkdf(
       32,
       &(aes_key->id)
   );
-	if (status != PSA_SUCCESS) { goto cleanup; }
+	if (status != PSA_SUCCESS) { printf("failed to import key"); goto cleanup; }
 
 	psa_key_derivation_abort(&deriv);
 
@@ -407,16 +414,23 @@ crypto_status_t generate_ecdsa_keypair(crypto_key_t *keypair)
 {
 	psa_key_attributes_t attr = PSA_KEY_ATTRIBUTES_INIT;
 	psa_status_t status;
+	
+//	mbedtls_svc_key_id_t key_id = mbedtls_svc_key_id_make(1, 53);  
 
-  psa_set_key_type(&attr, PSA_KEY_TYPE_ECC_KEY_PAIR(PSA_ECC_FAMILY_SECP_K1));
-  psa_set_key_bits(&attr, 256);
-
+//	psa_set_key_lifetime(&attr, PSA_KEY_LIFETIME_PERSISTENT);
 	psa_set_key_usage_flags(&attr,
 	   PSA_KEY_USAGE_SIGN_MESSAGE | PSA_KEY_USAGE_SIGN_HASH
 	);
+//	psa_set_key_id(&attr, key_id);
+  psa_set_key_type(&attr, PSA_KEY_TYPE_ECC_KEY_PAIR(PSA_ECC_FAMILY_SECP_K1));
 	psa_set_key_algorithm(&attr, PSA_ALG_ECDSA(PSA_ALG_SHA_256));
-
+  psa_set_key_bits(&attr, 256);
+	
 	status = psa_generate_key(&attr, &(keypair->id));
+	
+	psa_key_attributes_t attr2 = PSA_KEY_ATTRIBUTES_INIT;
+	psa_get_key_attributes(keypair->id, &attr2);
+		
 	keypair->type = KEY_TYPE_ID;
 
 	return psa_status_to_crypto(status);
@@ -459,4 +473,41 @@ crypto_status_t import_ecdsa_key(
 	);
 	key_out->type = KEY_TYPE_ID;
 	return psa_status_to_crypto(status);
+}
+
+crypto_status_t sign_message(
+	crypto_key_t *ecdsa_private_key,
+	crypto_message_t *message,
+	uint8_t *signature,
+	size_t signature_len,
+	size_t *signature_size
+)
+{
+	psa_status_t status;
+
+	uint8_t hash[256];
+	size_t hash_len;
+
+	status = psa_hash_compute(
+	    PSA_ALG_SHA_256,
+	    message->message,
+	    message->message_size,
+	    hash,
+	    sizeof(hash),
+	    &hash_len
+	);
+	if (status != PSA_SUCCESS) { return psa_status_to_crypto(status); }
+
+	status = psa_sign_hash(
+	    ecdsa_private_key->id,
+	    PSA_ALG_ECDSA(PSA_ALG_SHA_256),
+	    hash,
+	    hash_len,
+	    signature,
+	    signature_len,
+			signature_size
+	);
+	if (status != PSA_SUCCESS) { return psa_status_to_crypto(status); }
+
+	return CRYPTO_SUCCESS;
 }

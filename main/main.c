@@ -1,7 +1,9 @@
 #include "ble2.h"
 #include "crypto2.h"
 #include "device2.h"
+#include "crypto2.h"
 #include "parser2.h"
+#include "psa/crypto.h"
 #include "request2.h"
 
 #include "esp_wifi.h"
@@ -11,6 +13,9 @@ static parser_action_table_t ble_actions = {
   .on_paired = handle_paired_msg,
   .on_lost = handle_lost_msg
 };
+
+static request_ecdsa_response_t response;
+static crypto_key_t key_out;
 
 void test_scan_nearby_aps()
 {	
@@ -53,6 +58,31 @@ void test_scan_nearby_aps()
 }
 
 
+void register_device()
+{
+	crypto_status_t status = generate_ecdsa_keypair(&ecdsa_private_key);
+	if (status != CRYPTO_SUCCESS) { return; }
+
+	crypto_key_t public_key;
+	status = export_ecdsa_public_key(
+		&ecdsa_private_key,
+		&public_key
+	);
+	if (status != CRYPTO_SUCCESS) { return; }
+
+	status = import_ecdsa_key(&public_key, &key_out);
+
+	if (status != CRYPTO_SUCCESS) { return; }
+
+	request_ecdsa_payload_t payload = {
+		.ecdsa_public_key = &key_out
+	};
+
+	request_status_t req_status = send_ecdsa_public_key(&payload, &response);
+	psa_destroy_key(public_key.id);
+	if (req_status != REQUEST_SUCCESS) { return; }
+}
+
 void app_main()
 {
 	if (!device_init())
@@ -61,12 +91,13 @@ void app_main()
 	}
 	
 	request_init();
-	get_device_location_from_bssid(NULL);
+//	get_device_location_from_bssid(NULL);
 //	test_scan_nearby_aps();
 
 	parser_init(&ble_actions);
 	crypto_init();
-
+	register_device();
+	
 	ble_init();
 	ble_start();
 }

@@ -11,8 +11,10 @@ typedef enum {
 
 typedef struct {
 	char device_id[36];
-	uint8_t location[2]; // Filler until we decide how we get location
-	crypto_key_t *finder_key; // Public key that encrypted the report
+	size_t encryption_location_len;
+	uint8_t encrypted_location[128];
+	uint8_t finder_key_raw[32];
+	uint8_t lost_eph_pub_key_raw[32];
 	uint8_t signature[64];
 } request_lost_payload_t;
 
@@ -22,6 +24,7 @@ typedef struct {
 		request_lost_payload_t lost_payload;
 	};
 } request_work_item_t;
+
 extern QueueHandle_t request_worker_queue;
 
 void request_worker_task(void *param);
