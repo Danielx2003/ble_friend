@@ -39,6 +39,7 @@ typedef struct {
 } ble_work_connect_t;
 
 typedef struct {
+	uint16_t conn_handle;
 } ble_work_disconnect_t;
 
 typedef struct {

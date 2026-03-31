@@ -18,6 +18,8 @@ char device_uuid[36];
 
 request_status_t upload_lost_batch(request_lost_payload_t *batch, size_t batch_len)
 {
+	return REQUEST_SUCCESS;
+	
 	/* Temp logic to generate finders keypair */
 	crypto_key_t finder_priv_key;
 	crypto_status_t status = generate_keypair(CRYPTO_CURVE_X25519, &finder_priv_key);
@@ -37,7 +39,8 @@ request_status_t upload_lost_batch(request_lost_payload_t *batch, size_t batch_l
 	
 	printf("uploading %d payloads\n", batch_len);
 	esp_http_client_config_t config = {
-		.url = "http://192.168.0.172:3000/send",
+//		.url = "http://192.168.0.172:3000/send",
+		.url = "http://10.207.208.255:3000/send"
 	};
 	esp_http_client_handle_t client = esp_http_client_init(&config);
 
@@ -133,8 +136,11 @@ esp_err_t send_ecdsa_public_key_event_handler(esp_http_client_event_t *evt)
 
 request_status_t send_ecdsa_public_key(request_ecdsa_payload_t *payload, request_ecdsa_response_t *response)
 {
+	return REQUEST_SUCCESS;
+	
 	esp_http_client_config_t config = {
-		.url = "http://192.168.0.172:3000/register",
+//		.url = "http://192.168.0.172:3000/register",
+		.url = "http://10.207.208.255:3000/register",
 		.event_handler = send_ecdsa_public_key_event_handler,
 		.user_data = response
 	};

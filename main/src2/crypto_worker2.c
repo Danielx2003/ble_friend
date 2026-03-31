@@ -118,6 +118,7 @@ void handle_lost_msg_crypto(crypto_work_item_t *item)
 
 void handle_read_complete_crypto(crypto_work_item_t *item)
 {
+	printf("handle generate key ...\n");
 	crypto_key_t pub_key;
 	crypto_key_t keypair;
 
@@ -166,12 +167,12 @@ void crypto_worker_task(void *param)
 
   while(1) {
 	  if(xQueueReceive(crypto_worker_queue, &item, portMAX_DELAY)) {
-			vTaskDelay(pdMS_TO_TICKS(10000));
 	    switch(item.type) {
 				case CRYPTO_WORKER_EVENT_LOST_MSG:
 					handle_lost_msg_crypto(&item);
 					break;
 				case CRYPTO_WORKER_EVENT_READ_COMPLETE:
+					printf("crypto queue received event\n");
 					handle_read_complete_crypto(&item);
 					break;
 				default:

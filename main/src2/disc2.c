@@ -20,6 +20,7 @@ int on_read(uint16_t conn_handle,
                    struct ble_gatt_attr *attr,
                    void *arg)
 {
+	printf("successfully read...\n");
 	crypto_work_item_t item = {
 		.type = CRYPTO_WORKER_EVENT_READ_COMPLETE,
 		.context.read_complete = {
@@ -45,6 +46,8 @@ int on_read(uint16_t conn_handle,
 
     item.context.read_complete.data_len = len;
   }
+	
+	printf("sending to crypto queue\n");
 
   xQueueSend(crypto_worker_queue, &item, 0);
   return 0;
@@ -88,11 +91,12 @@ int disc_cb(struct ble_gap_event *event, void *arg)
 			{
 				uint16_t conn = event->connect.conn_handle;
 
-				int rc = ble_gap_security_initiate(conn);
-
-				if (rc != 0) {
-				    printf("security initiate failed rc=%d\n", rc);
-				}
+				// Gets run twice, once here (first) then inside the handle_new_connection -> leading to error
+//				int rc = ble_gap_security_initiate(conn);
+//
+//				if (rc != 0) {
+//				    printf("security initiate failed rc=%d\n", rc);
+//				}
 
 				ble_work_item_t item = {
 				    .type = BLE_WORKER_EVENT_CONNECT
@@ -130,6 +134,7 @@ int disc_cb(struct ble_gap_event *event, void *arg)
 				ble_work_item_t item = {
 					.type = BLE_WORKER_EVENT_DISCONNECT,
 				};
+				item.context.disconnect.conn_handle = event->disconnect.conn.conn_handle;
 
 				xQueueSend(ble_worker_queue, &item, 0);	
 			}
@@ -155,9 +160,11 @@ ble_status_t discover_all_services(ble_work_connect_t *connect)
 	int rc = peer_add(conn);
 	 if (rc != 0)
 	 {
-	   ESP_LOGE(tag,
+		ESP_LOGE(tag,
 	            "Failed to add peer rc=%d",
 	            rc);
+		ble_gap_terminate(connect->conn_handle, 0);
+		
 	   return 0;
 	 }
 
@@ -238,7 +245,7 @@ ble_status_t disc_start(ble_disc_params_t *params,
 	disc_params.filter_duplicates = 0;
   disc_params.passive = params->passive;
   disc_params.itvl = BLE_GAP_SCAN_ITVL_MS(100);
-	disc_params.window = BLE_GAP_SCAN_WIN_MS(100);
+	disc_params.window = BLE_GAP_SCAN_WIN_MS(50);
 	
 
   rc = ble_hs_id_infer_auto(0, &own_addr_type);

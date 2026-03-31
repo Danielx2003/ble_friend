@@ -68,6 +68,7 @@ int payloads_received = 0;
 
 void handle_lost_msg(ble_work_msg_t *msg, mfg_data_t *mfg)
 {
+	printf("lost msg discovered\n");
 	crypto_work_item_t crypto_item = {
 		.type = CRYPTO_WORKER_EVENT_LOST_MSG,
 	};
@@ -220,8 +221,17 @@ ble_status_t handle_enc_change(ble_work_connect_t *connect)
 }
 
 
-ble_status_t handle_on_disconnect()
+ble_status_t handle_on_disconnect(ble_work_disconnect_t *disconnect)
 {
+	int rc = peer_delete(disconnect->conn_handle);
+	if (rc != 0)
+	{
+		ESP_LOGE(tag,
+		         "Failed to delete peer rc=%d",
+		         rc);
+		return 0;
+	}	
+
   ble_disc_params_t params = {
     .filter_duplicates = 1,
     .passive = 1,
