@@ -63,7 +63,7 @@ GET
 Owner requests all location's with the given public key
 Then he can decrypt - which can be done elsewhere(?)
 */
-request_status_t get_all_locations();
+request_status_t get_all_locations(request_location_for_eph_key *item);
 
 request_status_t send_ecdsa_public_key(
 	request_ecdsa_payload_t *payload,

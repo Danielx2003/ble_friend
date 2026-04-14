@@ -1,6 +1,8 @@
 #pragma once
 
 #include "nimble/ble.h"
+#include <stdint.h>
+#include <stddef.h>
 
 #define BLE_QUEUE_LEN 128
 

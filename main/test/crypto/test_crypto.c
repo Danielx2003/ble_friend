@@ -286,13 +286,13 @@ void test_enc_roundtrip()
 	/* 6. Owner re-derives eph key */
 	
 	crypto_key_t eph_priv;
-	const uint8_t info[] = "eph_private"; 
+	const uint8_t info[] = "eph_private";
 	
 	TEST_ASSERT_TRUE(derive_ephemeral_private_key(
 		&master_secret,
 		info, sizeof(info),
 		&eph_priv
-	) == CRYPTO_SUCCESS);	
+	) == CRYPTO_SUCCESS);
 	
 	/* 7. Owner perofrms ECDH with finder's public key */
 	

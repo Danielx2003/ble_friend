@@ -1,5 +1,5 @@
 #include "unity.h"
-#include "parser.h"
+#include "parser2.h"
 
 /* Static Variables */
 
@@ -8,22 +8,19 @@ bool paired_msg_called = false;
 bool lost_msg_called = false;
 
 /* Mock Handlers */
-bool on_pairing_msg(void *ctx, mfg_data_t *mfg)
+void on_pairing_msg(ble_work_msg_t *msg, mfg_data_t *mfg)
 {
 	pairing_msg_called = true;
-	return true;
 }
 
-bool on_paired_msg(void *ctx, mfg_data_t *mfg)
+void on_paired_msg(ble_work_msg_t *msg, mfg_data_t *mfg)
 {
 	paired_msg_called = true;
-	return true;
 }
 
-bool on_lost_msg(void *ctx, mfg_data_t *mfg)
+void on_lost_msg(ble_work_msg_t *msg, mfg_data_t *mfg)
 {
 	lost_msg_called = true;
-	return true;
 }
 
 static parser_action_table_t ble_actions = {
@@ -129,7 +126,7 @@ void test_parse_protocol_pairing_msg()
   };
 	
 	parser_result_t result;
-	result.mfg = mfg_data;
+	result.mfg = &mfg_data;
 
   parser_status_t status = parse_protocol_msg((mfg_data.version_mode & 0x0F), &result);
 
@@ -150,7 +147,7 @@ void test_parse_protocol_paired_msg()
   };
 	
 	parser_result_t result;
-	result.mfg = mfg_data;
+	result.mfg = &mfg_data;
 
   parser_status_t status = parse_protocol_msg((mfg_data.version_mode & 0x0F), &result);
 
@@ -171,7 +168,7 @@ void test_parse_protocol_lost_msg()
   };
 	
 	parser_result_t result;
-	result.mfg = mfg_data;
+	result.mfg = &mfg_data;
 
   parser_status_t status = parse_protocol_msg((mfg_data.version_mode & 0x0F), &result);
 
@@ -192,7 +189,7 @@ void test_parse_protocol_invalid_mode()
   };
 	
 	parser_result_t result;
-	result.mfg = mfg_data;
+	result.mfg = &mfg_data;
 
   parser_status_t status = parse_protocol_msg((mfg_data.version_mode & 0x0F), &result);
 

@@ -15,6 +15,9 @@ static uint8_t counter = 1;
 QueueHandle_t crypto_worker_queue = NULL;
 crypto_key_t ecdsa_private_key = {0};
 crypto_key_t ecdsa_public_key = {0};
+crypto_key_t device_private_key = {0};
+crypto_key_t device_public_key = {0};
+crypto_key_t master_secret = {0};
 
 /* Static Functions */
 
@@ -52,6 +55,10 @@ crypto_status_t psa_status_to_crypto(psa_status_t status)
 crypto_status_t crypto_init()
 {
 	psa_status_t status = psa_crypto_init();
+	
+	generate_keypair(CRYPTO_CURVE_X25519, &device_private_key);
+	crypto_status_t s = export_public_key(&device_private_key, &device_public_key, 32);
+	if (s != CRYPTO_SUCCESS) { printf("failed to setup crypto\n"); return CRYPTO_ERR_UNKNOWN; }
 	
 	crypto_worker_queue =
 	    xQueueCreate(128, sizeof(crypto_work_item_t));
@@ -476,7 +483,6 @@ crypto_status_t import_ecdsa_key(
 }
 
 crypto_status_t sign_message(
-	crypto_key_t *ecdsa_private_key,
 	crypto_message_t *message,
 	uint8_t *signature,
 	size_t signature_len,
@@ -499,7 +505,7 @@ crypto_status_t sign_message(
 	if (status != PSA_SUCCESS) { return psa_status_to_crypto(status); }
 
 	status = psa_sign_hash(
-	    ecdsa_private_key->id,
+	    ecdsa_private_key.id,
 	    PSA_ALG_ECDSA(PSA_ALG_SHA_256),
 	    hash,
 	    hash_len,
@@ -508,6 +514,19 @@ crypto_status_t sign_message(
 			signature_size
 	);
 	if (status != PSA_SUCCESS) { return psa_status_to_crypto(status); }
+	
+	/* TEMP: VERIFY HASH */
+	
+	status = psa_verify_hash(
+	    ecdsa_public_key.id,
+	    PSA_ALG_ECDSA(PSA_ALG_SHA_256),
+	    hash,
+	    hash_len,
+	    signature,
+	    signature_len
+	);
+	if (status != PSA_SUCCESS) { printf("invalid hash\n"); return psa_status_to_crypto(status); }
+	printf("valid signige\n");
 
 	return CRYPTO_SUCCESS;
 }

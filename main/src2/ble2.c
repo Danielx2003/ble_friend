@@ -52,7 +52,7 @@ void handle_on_sync(void)
 
 void handle_pairing_msg(ble_work_msg_t *msg, mfg_data_t *mfg)
 {
-	printf("pairing msg receive\n");
+	printf("received pairing\n");
   disc_stop();
   start_connect(msg);
 }
@@ -60,7 +60,6 @@ void handle_pairing_msg(ble_work_msg_t *msg, mfg_data_t *mfg)
 
 void handle_paired_msg(ble_work_msg_t *msg, mfg_data_t *mfg)
 {
-  printf("paired msg\n");
 }
 
 int payloads_received = 0;
@@ -68,10 +67,14 @@ int payloads_received = 0;
 
 void handle_lost_msg(ble_work_msg_t *msg, mfg_data_t *mfg)
 {
-	printf("lost msg discovered\n");
 	crypto_work_item_t crypto_item = {
 		.type = CRYPTO_WORKER_EVENT_LOST_MSG,
 	};
+	memcpy(
+		&crypto_item.context.lost_msg.mfg,
+		mfg,
+		sizeof(mfg_data_t)
+	);
 	
 	xQueueSend(crypto_worker_queue, &crypto_item, 0);
 }
@@ -91,6 +94,7 @@ ble_status_t handle_read_complete(ble_work_read_complete_t *read)
   }
 
   ESP_LOGI(tag, "Received peer public key (%d bytes)", read->data_len);
+	paired = true;
 
   return BLE_SUCCESS;
 }
@@ -134,6 +138,12 @@ ble_status_t write_key_to_peer(ble_work_write_key_t *item)
     return BLE_FAIL;
   }
 	
+	for (int i =0; i < txom->om_len; i++)
+	{
+		printf("%02X", txom->om_data[i]);
+	}
+	printf("\n");
+	
 	ESP_LOGE(tag, "Wrote public key to other device\n");
 
 	return BLE_SUCCESS;
@@ -160,7 +170,19 @@ ble_status_t handle_ext_disc(ble_work_item_t *item)
 	);
 
 	if (status != CRYPTO_SUCCESS) { return status; }
-
+	
+//	struct timeval now = {0};
+//	gettimeofday(&now, NULL);
+//	int diff = (now.tv_sec - disc_start_time.tv_sec) * 1000 + (now.tv_usec - disc_start_time.tv_sec) / 1000;
+//
+//	printf("TT Disc: %d\n", diff);
+//	
+//	srand(time(NULL));
+//	int random_ms = (rand() % 3000) + 1;	
+//	vTaskDelay(pdMS_TO_TICKS(random_ms));
+//
+//	esp_restart();
+	
   result.action(&item->context.msg, result.mfg);
 	
   return BLE_SUCCESS;

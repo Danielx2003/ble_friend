@@ -7,6 +7,7 @@
 #include "request2.h"
 
 #include "esp_wifi.h"
+#include <sys/time.h>
 
 static parser_action_table_t ble_actions = {
   .on_pairing = handle_pairing_msg,
@@ -14,8 +15,10 @@ static parser_action_table_t ble_actions = {
   .on_lost = handle_lost_msg
 };
 
+struct timeval disc_start_time = {0};
+bool paired = false;
+
 static request_ecdsa_response_t response;
-static crypto_key_t key_out;
 
 void test_scan_nearby_aps()
 {	
@@ -60,26 +63,27 @@ void test_scan_nearby_aps()
 
 void register_device()
 {
+	printf("register device\n");
 	crypto_status_t status = generate_ecdsa_keypair(&ecdsa_private_key);
 	if (status != CRYPTO_SUCCESS) { return; }
 
-	crypto_key_t public_key;
+	crypto_key_t key_out;
+	
 	status = export_ecdsa_public_key(
 		&ecdsa_private_key,
-		&public_key
+		&key_out
 	);
 	if (status != CRYPTO_SUCCESS) { return; }
 
-	status = import_ecdsa_key(&public_key, &key_out);
+	status = import_ecdsa_key(&key_out, &ecdsa_public_key);
 
 	if (status != CRYPTO_SUCCESS) { return; }
 
 	request_ecdsa_payload_t payload = {
-		.ecdsa_public_key = &key_out
+		.ecdsa_public_key = &ecdsa_public_key
 	};
 
 	request_status_t req_status = send_ecdsa_public_key(&payload, &response);
-	psa_destroy_key(public_key.id);
 	if (req_status != REQUEST_SUCCESS) { return; }
 }
 
@@ -100,4 +104,6 @@ void app_main()
 	
 	ble_init();
 	ble_start();
+
+//	gettimeofday(&disc_start_time, NULL);
 }

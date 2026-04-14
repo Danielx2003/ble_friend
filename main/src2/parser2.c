@@ -74,7 +74,7 @@ parser_status_t parse_protocol_msg(parser_msg_t type, parser_result_t* out_resul
 {
   switch (type) {
     case PARSER_PAIRING_MSG:
-			if (g_actions->on_pairing) { out_result->action = g_actions->on_pairing; printf("pairing msg\n"); }
+			if (g_actions->on_pairing) { out_result->action = g_actions->on_pairing; }
       break;
 
     case PARSER_PAIRED_MSG:

@@ -245,7 +245,7 @@ ble_status_t disc_start(ble_disc_params_t *params,
 	disc_params.filter_duplicates = 0;
   disc_params.passive = params->passive;
   disc_params.itvl = BLE_GAP_SCAN_ITVL_MS(100);
-	disc_params.window = BLE_GAP_SCAN_WIN_MS(50);
+	disc_params.window = BLE_GAP_SCAN_WIN_MS(75);
 	
 
   rc = ble_hs_id_infer_auto(0, &own_addr_type);

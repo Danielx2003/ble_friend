@@ -6,7 +6,8 @@
 #define REQUEST_QUEUE_LEN 32
 
 typedef enum {
-	REQUEST_WORKER_EVENT_UPLOAD_LOST_LOCATION
+	REQUEST_WORKER_EVENT_UPLOAD_LOST_LOCATION,
+	REQUEST_WORKER_EVENT_FETCH_LOST_DEVICE_LOCATION
 } request_worker_event_t;
 
 typedef struct {
@@ -19,9 +20,15 @@ typedef struct {
 } request_lost_payload_t;
 
 typedef struct {
+	size_t len;
+	uint8_t eph_pub_key[256];
+} request_location_for_eph_key;
+
+typedef struct {
 	request_worker_event_t type;
 	union {
 		request_lost_payload_t lost_payload;
+		request_location_for_eph_key get_device_loc;
 	};
 } request_work_item_t;
 

@@ -11,6 +11,8 @@
 #define CRYPTO_BACKEND_KEY_HANDLE psa_key_id_t
 #define ECDSA_PRIV_KEY_ID ((psa_key_id_t)0x00000010)
 
+extern bool paired;
+
 void curve25519_clamp(uint8_t k[32]);
 
 typedef enum {
@@ -107,7 +109,7 @@ crypto_status_t import_ecdsa_key(
 );
 
 crypto_status_t sign_message(
-	crypto_key_t *ecdsa_private_key,
+//	crypto_key_t *ecdsa_private_key,
 	crypto_message_t *message,
 	uint8_t *signature,
 	size_t signature_len,
@@ -119,3 +121,9 @@ crypto_status_t convert_from_id_to_raw(crypto_key_t *key);
 
 extern crypto_key_t ecdsa_private_key;
 extern crypto_key_t ecdsa_public_key;
+
+extern crypto_key_t device_private_key;
+extern crypto_key_t device_public_key;
+
+extern crypto_key_t master_secret;
+

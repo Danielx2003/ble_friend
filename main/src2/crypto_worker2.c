@@ -6,6 +6,7 @@
 #include "request2.h"
 
 #include "esp_log.h"
+#include "request_worker2.h"
 #include <stddef.h>
 
 /* Crypto Worker Task */
@@ -39,7 +40,7 @@ void handle_lost_msg_crypto(crypto_work_item_t *item)
 	);
 
 	crypto_key_t secret;
-
+	
 	status = generate_secret(
 		&finder_keypair, 
 		&eph_pub_key,
@@ -59,6 +60,7 @@ void handle_lost_msg_crypto(crypto_work_item_t *item)
 	if (status != CRYPTO_SUCCESS) { return; }
 	
 	// Encrypt location
+
 	uint8_t location_plaintext[] = {0x04, 0x05}; // Replace with a get_location function
 	uint8_t location_enc[128];
 	uint8_t nonce[12] = {0};
@@ -85,7 +87,7 @@ void handle_lost_msg_crypto(crypto_work_item_t *item)
 	size_t signature_size;
 
 	status = sign_message(
-		&ecdsa_private_key,
+//		&ecdsa_private_key,
 		&msg,
 		signature,
 		64,
@@ -94,7 +96,6 @@ void handle_lost_msg_crypto(crypto_work_item_t *item)
 	if (status != CRYPTO_SUCCESS) { return; }
 
 	//	Send Upload Command
-	
 	request_lost_payload_t lost_payload;
 	lost_payload.encryption_location_len = ciphertext_len;
 	memcpy(lost_payload.device_id, device_uuid, sizeof(device_uuid));
@@ -108,8 +109,56 @@ void handle_lost_msg_crypto(crypto_work_item_t *item)
 	};
 	memcpy(&request_item.lost_payload, &lost_payload, sizeof(request_lost_payload_t));
 	
-	
 	xQueueSend(request_worker_queue, &request_item, 0);
+	
+//	/*
+//	Now simulate the owner retrieving and fetching the location
+//	*/
+//	
+//	if (!paired)
+//	{
+//		printf("not paired\n");
+//		psa_destroy_key(aes_key.id);
+//		psa_destroy_key(secret.id);
+//		psa_destroy_key(finder_keypair.id);
+//		return;
+//	}
+//
+//	crypto_key_t eph_priv;
+//	const uint8_t info[] = "eph_private";
+//
+//	status = derive_ephemeral_private_key(
+//		&master_secret,
+//		info, sizeof(info),
+//		&eph_priv
+//	);
+//	if (status != CRYPTO_SUCCESS) {
+//		printf("failed to derive eph priv key\n");
+//	}
+//	
+//	// Fetch location and finder key
+//	printf("make API request here\n");
+//	
+//	request_work_item_t request_item_2 = {
+//		.type = REQUEST_WORKER_EVENT_FETCH_LOST_DEVICE_LOCATION
+//	};
+//	request_location_for_eph_key eph_payload;
+//	crypto_key_t derived_eph_pub_key;
+//
+//	status = derive_public_key(
+//	    &master_secret,
+//			&derived_eph_pub_key
+//	);
+//	if (status != CRYPTO_SUCCESS)
+//	{
+//		printf("failed to derive pub key\n");
+//		return;
+//	}
+//	eph_payload.len = 32;
+//	memcpy(eph_payload.eph_pub_key, derived_eph_pub_key.raw.data, derived_eph_pub_key.raw.len);
+//	memcpy(&request_item.get_device_loc, &eph_payload, sizeof(request_location_for_eph_key));
+//
+//	xQueueSend(request_worker_queue, &request_item_2, 0);
 
 	psa_destroy_key(aes_key.id);
 	psa_destroy_key(secret.id);
@@ -118,19 +167,20 @@ void handle_lost_msg_crypto(crypto_work_item_t *item)
 
 void handle_read_complete_crypto(crypto_work_item_t *item)
 {
-	printf("handle generate key ...\n");
-	crypto_key_t pub_key;
-	crypto_key_t keypair;
-
-	generate_keypair(CRYPTO_CURVE_X25519, &keypair);
-
-	crypto_status_t status =
-	    export_public_key(&keypair, &pub_key, 32);
-
-	if (status != CRYPTO_SUCCESS) {
-		ESP_LOGE("CRYPTO", "Failed to export public key. Status=%d", status);
+	crypto_key_t peer_pub_key = {0};
+	memcpy(
+		&peer_pub_key.raw,
+		&item->context.read_complete,
+		sizeof(item->context.read_complete)
+	);
+	peer_pub_key.raw.len = 32;
+	
+	crypto_status_t status = generate_secret(&device_private_key, &peer_pub_key ,&master_secret);
+	if (status != CRYPTO_SUCCESS)
+	{
+		printf("failed to generate master secret\n");
 	}
-
+	
   ble_work_item_t ble_item;
   ble_item.type = BLE_WORKER_EVENT_READ_COMPLETE;
 	memcpy(
@@ -147,10 +197,10 @@ void handle_read_complete_crypto(crypto_work_item_t *item)
 	ble_item.context.write_pub_key.conn_handle = item->context.read_complete.conn_handle;
 	memcpy(
 		ble_item.context.write_pub_key.pub_key,
-		pub_key.raw.data,
-		pub_key.raw.len
+		device_public_key.raw.data,
+		device_public_key.raw.len
 	);
-	ble_item.context.write_pub_key.pub_key_len = pub_key.raw.len;
+	ble_item.context.write_pub_key.pub_key_len = device_public_key.raw.len;
 
 	if (xQueueSend(ble_worker_queue, &ble_item, portMAX_DELAY) != pdPASS) {
 	    ESP_LOGE("CRYPTO", "Failed to send to BLE worker queue");

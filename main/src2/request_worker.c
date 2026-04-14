@@ -15,6 +15,9 @@ void request_worker_task(void *param)
 	  if(xQueueReceive(request_worker_queue, &item, portMAX_DELAY)) {
 			switch (item.type)
 			{
+				case REQUEST_WORKER_EVENT_FETCH_LOST_DEVICE_LOCATION:
+					get_all_locations(&item.get_device_loc);
+					break;
 				case REQUEST_WORKER_EVENT_UPLOAD_LOST_LOCATION:
 					lost_batch[batch_count++] = item.lost_payload;
 	
