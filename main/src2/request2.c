@@ -4,14 +4,13 @@
 #include "freertos/idf_additions.h"
 #include "parser2.h"
 #include "request_worker2.h"
-#include "ble2.h"
 
 #include "esp_log.h"
 #include "esp_http_client.h"
 
 /* Static + Global Variables */
 
-static const char *TAG = "wifi station";
+static const char *tag = "wifi station";
 
 QueueHandle_t request_worker_queue = NULL;
 char device_uuid[36];
@@ -44,11 +43,11 @@ request_status_t upload_lost_batch(request_lost_payload_t *batch, size_t batch_l
 	esp_err_t err = esp_http_client_perform(client);
 
 	if (err == ESP_OK) {
-	    ESP_LOGI(TAG, "HTTPS Status = %d, content_length = %"PRId64,
+	    ESP_LOGI(tag, "HTTPS Status = %d, content_length = %"PRId64,
 	            esp_http_client_get_status_code(client),
 	            esp_http_client_get_content_length(client));
 	} else {
-	    ESP_LOGE(TAG, "Error perform http request %s", esp_err_to_name(err));
+	    ESP_LOGE(tag, "Error perform http request %s", esp_err_to_name(err));
 	}
 	esp_http_client_cleanup(client);
 
@@ -62,7 +61,7 @@ esp_err_t send_ecdsa_public_key_event_handler(esp_http_client_event_t *evt)
 
   switch(evt->event_id) {
     case HTTP_EVENT_ON_DATA:
-      printf("Received %d bytes", evt->data_len);
+      ESP_LOGE(tag, "Received %d bytes", evt->data_len);
       printf("%.*s\n", evt->data_len, (char*)evt->data);
 			memcpy(device_uuid, evt->data, evt->data_len);
       break;
@@ -106,11 +105,11 @@ request_status_t send_ecdsa_public_key(request_ecdsa_payload_t *payload, request
 	esp_err_t err = esp_http_client_perform(client);
 
 	if (err == ESP_OK) {
-	    ESP_LOGI(TAG, "HTTPS Status = %d, content_length = %"PRId64,
+	    ESP_LOGI(tag, "HTTPS Status = %d, content_length = %"PRId64,
 	            esp_http_client_get_status_code(client),
 	            esp_http_client_get_content_length(client));
 	} else {
-	    ESP_LOGE(TAG, "Error perform http request %s", esp_err_to_name(err));
+	    ESP_LOGE(tag, "Error perform http request %s", esp_err_to_name(err));
 	}
 
 	esp_http_client_cleanup(client);
@@ -131,15 +130,6 @@ esp_err_t get_lost_device_locations_event_handler(esp_http_client_event_t *evt)
         // Read finder key (length-prefixed)
         uint16_t key_len = (ptr[0] << 8) | ptr[1];  ptr += 2;
         uint8_t *finder_key = ptr;
-
-        // Verify sizes
-        printf("enc_loc (%d bytes): ", enc_len);
-        for (int i = 0; i < enc_len; i++) printf("%02x ", enc_location[i]);
-        printf("\n");
-
-        printf("finder_key (%d bytes): ", key_len);
-        for (int i = 0; i < key_len; i++) printf("%02x ", finder_key[i]);
-        printf("\n");
 				
 				crypto_work_item_t item = {
 					.type = CRYPTO_WORKER_DECRYPT_LOC_REPORT
@@ -178,11 +168,11 @@ request_status_t get_all_locations(request_location_for_eph_key_t *item)
 		esp_err_t err = esp_http_client_perform(client);
 
 		if (err == ESP_OK) {
-		    ESP_LOGI(TAG, "HTTPS Status = %d, content_length = %"PRId64,
+		    ESP_LOGI(tag, "HTTPS Status = %d, content_length = %"PRId64,
 		            esp_http_client_get_status_code(client),
 		            esp_http_client_get_content_length(client));
 		} else {
-		    ESP_LOGE(TAG, "Error perform http request %s", esp_err_to_name(err));
+		    ESP_LOGE(tag, "Error perform http request %s", esp_err_to_name(err));
 		}
 
 		esp_http_client_cleanup(client);
@@ -277,21 +267,6 @@ request_status_t get_user_location(request_user_location_t *payload)
 	    records[i]->rssi = networks[i].rssi;
 	}
 
-//	my_wifi_ap_record_t record = {
-//		.bssid = {0x64, 0xFA, 0x2B, 0x3A, 0x88, 0xD2},
-//		.rssi = -66
-//	};
-//
-//	my_wifi_ap_record_t record2 = {
-//		.bssid = {0x8C, 0x9A, 0x8F, 0x08, 0x9B, 0x3E},
-//		.rssi = -67
-//	};
-//
-//	my_wifi_ap_record_t record3 = {
-//		.bssid = {0x3C, 0x6A, 0xD2, 0xE9, 0x54, 0xD2},
-//		.rssi = -78
-//	};
-
 	request_device_location_payload_t wire = {
 		.number_aps = 3,
 	};
@@ -309,11 +284,11 @@ request_status_t get_user_location(request_user_location_t *payload)
 	esp_err_t err = esp_http_client_perform(client);
 
 	if (err == ESP_OK) {
-	    ESP_LOGI(TAG, "HTTPS Status = %d, content_length = %"PRId64,
+	    ESP_LOGI(tag, "HTTPS Status = %d, content_length = %"PRId64,
 	            esp_http_client_get_status_code(client),
 	            esp_http_client_get_content_length(client));
 	} else {
-	    ESP_LOGE(TAG, "Error perform http request %s", esp_err_to_name(err));
+	    ESP_LOGE(tag, "Error perform http request %s", esp_err_to_name(err));
 	}
 	esp_http_client_cleanup(client);
 	
@@ -328,7 +303,7 @@ request_status_t request_init()
 	    xQueueCreate(REQUEST_QUEUE_LEN, sizeof(request_work_item_t));
 
 	if (!request_worker_queue) {
-	  ESP_LOGE(TAG, "Failed to create Request worker queue");
+	  ESP_LOGE(tag, "Failed to create Request worker queue");
 	  return REQUEST_ERR_NO_MEMORY;
 	}
 

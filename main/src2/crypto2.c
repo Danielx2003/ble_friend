@@ -4,12 +4,15 @@
 #include "psa/crypto.h"
 #include "psa/crypto_types.h"
 #include "psa/crypto_values.h"
+#include "esp_log.h"
 
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 
 /* Static Variables */
+
+static const char *tag = "CRYPTO";
 
 static uint8_t counter = 1;
 QueueHandle_t crypto_worker_queue = NULL;
@@ -49,7 +52,7 @@ crypto_status_t crypto_init(void)
   generate_keypair(CRYPTO_CURVE_X25519, &device_private_key);
   crypto_status_t s = export_public_key(&device_private_key, &device_public_key, 32);
   if (s != CRYPTO_SUCCESS) {
-    printf("failed to setup crypto\n");
+    ESP_LOGE(tag, "failed to setup crypto\n");
     return CRYPTO_ERR_UNKNOWN;
   }
 
@@ -264,7 +267,7 @@ crypto_status_t derive_symmetric_aes_key_hkdf(
   psa_key_derivation_operation_t deriv = PSA_KEY_DERIVATION_OPERATION_INIT;
 
   status = psa_key_derivation_setup(&deriv, PSA_ALG_HKDF(PSA_ALG_SHA_256));
-  if (status != PSA_SUCCESS) { printf("setup failed: %ld\n", status); goto cleanup; }
+  if (status != PSA_SUCCESS) { ESP_LOGE(tag, "setup failed: %ld\n", status); goto cleanup; }
 
   status = psa_key_derivation_input_bytes(
     &deriv, PSA_KEY_DERIVATION_INPUT_SALT, salt, salt_len);
@@ -290,7 +293,7 @@ crypto_status_t derive_symmetric_aes_key_hkdf(
   psa_set_key_algorithm(&aes_attr, PSA_ALG_GCM);
 
   status = psa_import_key(&aes_attr, finder_sym_bytes, 32, &aes_key->id);
-  if (status != PSA_SUCCESS) { printf("failed to import key\n"); goto cleanup; }
+  if (status != PSA_SUCCESS) { ESP_LOGE(tag, "failed to import key\n"); goto cleanup; }
 
   psa_key_derivation_abort(&deriv);
   return CRYPTO_SUCCESS;
@@ -401,7 +404,7 @@ crypto_status_t sign_message(
     hash, hash_len,
     signature, signature_len);
   if (status != PSA_SUCCESS) {
-    printf("invalid hash\n");
+    ESP_LOGE(tag, "invalid hash");
     return psa_status_to_crypto(status);
   }
 

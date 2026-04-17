@@ -12,6 +12,7 @@
 /* Crypto Worker Task */
 
 static int pass = 0;
+static const char *tag = "CRYPTO";
 
 void decrypt_loc_report(crypto_work_decrypt_loc_t *item)
 {
@@ -57,7 +58,7 @@ void decrypt_loc_report(crypto_work_decrypt_loc_t *item)
     &decrypted_len);
 
   if (status != CRYPTO_SUCCESS) {
-    printf("failed to decrypt location report\n");
+    ESP_LOGE(tag, "failed to decrypt location report\n");
     return;
   }
 
@@ -145,7 +146,6 @@ void handle_lost_msg_crypto(crypto_work_item_t *item)
   xQueueSend(request_worker_queue, &request_item, 0);
 
   if (!paired) {
-    printf("not paired\n");
     psa_destroy_key(aes_key.id);
     psa_destroy_key(secret.id);
     psa_destroy_key(finder_keypair.id);
@@ -160,7 +160,7 @@ void handle_lost_msg_crypto(crypto_work_item_t *item)
 
   status = derive_ephemeral_private_key(&master_secret, info, sizeof(info), &eph_priv);
   if (status != CRYPTO_SUCCESS) {
-    printf("failed to derive eph priv key\n");
+    ESP_LOGE(tag, "failed to derive eph priv key\n");
   }
 
   request_work_item_t request_item_2 = {
@@ -171,21 +171,9 @@ void handle_lost_msg_crypto(crypto_work_item_t *item)
 
   status = derive_public_key(&master_secret, &derived_eph_pub_key);
   if (status != CRYPTO_SUCCESS) {
-    printf("failed to derive pub key\n");
+    ESP_LOGE(tag, "failed to derive pub key\n");
     return;
   }
-
-  printf("broadcast public key:\n");
-  for (int i = 0; i < 32; i++) {
-    printf("%02X", eph_pub_key.raw.data[i]);
-  }
-  printf("\n");
-
-  printf("derived public key:\n");
-  for (int i = 0; i < 32; i++) {
-    printf("%02X", derived_eph_pub_key.raw.data[i]);
-  }
-  printf("\n");
 
   eph_payload.len = 32;
   memcpy(eph_payload.eph_pub_key, derived_eph_pub_key.raw.data, derived_eph_pub_key.raw.len);
@@ -214,9 +202,9 @@ void handle_read_complete_crypto(crypto_work_item_t *item)
     &master_secret);
 
   if (status != CRYPTO_SUCCESS) {
-    printf("failed to generate master secret\n");
+    ESP_LOGE(tag, "failed to generate master secret\n");
   } else {
-    printf("generated master secret\n");
+    ESP_LOGI(tag, "generated master secret\n");
   }
 
   ble_work_item_t ble_item;
@@ -248,7 +236,7 @@ void crypto_worker_task(void *param)
   crypto_status_t status;
 
   status = generate_ecdsa_keypair(&ecdsa_private_key);
-  if (status != CRYPTO_SUCCESS) { printf("failed to generate keypair!\n"); }
+  if (status != CRYPTO_SUCCESS) { ESP_LOGE(TAG, "failed to generate keypair!\n"); }
 
   crypto_work_item_t item;
 

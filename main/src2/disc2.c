@@ -88,13 +88,6 @@ int disc_cb(struct ble_gap_event *event, void *arg)
 			{
 				uint16_t conn = event->connect.conn_handle;
 
-				// Gets run twice, once here (first) then inside the handle_new_connection -> leading to error
-//				int rc = ble_gap_security_initiate(conn);
-//
-//				if (rc != 0) {
-//				    printf("security initiate failed rc=%d\n", rc);
-//				}
-
 				ble_work_item_t item = {
 				    .type = BLE_WORKER_EVENT_CONNECT
 				};
@@ -102,7 +95,7 @@ int disc_cb(struct ble_gap_event *event, void *arg)
 
 				xQueueSend(ble_worker_queue, &item, 0);
 			} else {
-				printf("failed to connect. reason=%d\n", event->connect.status);
+				ESP_LOGE(tag, "failed to connect. reason=%d\n", event->connect.status);
 			}
       break;
 
@@ -138,8 +131,8 @@ int disc_cb(struct ble_gap_event *event, void *arg)
 			break;
 
 		case BLE_GAP_EVENT_DISC_COMPLETE:
-			printf("discovery complete\n");
-			printf("Total Payloads: %d\n", payloads_received);
+//			printf("discovery complete\n");
+//			printf("Total Payloads: %d\n", payloads_received);
 			break;
     default:
       break;

@@ -14,7 +14,7 @@
 
 /* Static + Global Variables */
 
-static const char *tag = "BLE_2";
+static const char *tag = "BLE";
 
 static const ble_uuid128_t key_exchange_svr_uuid =
   BLE_UUID128_INIT(PUB_KEY_SERVICE_UUID);
@@ -48,7 +48,6 @@ void handle_on_sync(void)
 
 void handle_pairing_msg(ble_work_msg_t *msg, mfg_data_t *mfg)
 {
-  printf("received pairing\n");
   disc_stop();
   start_connect(msg);
 }
