@@ -1,6 +1,8 @@
 #include "request2.h"
 #include "crypto2.h"
+#include "crypto_worker2.h"
 #include "freertos/idf_additions.h"
+#include "parser2.h"
 #include "request_worker2.h"
 #include "ble2.h"
 
@@ -17,11 +19,9 @@ char device_uuid[36];
 /* Request Functions */
 
 request_status_t upload_lost_batch(request_lost_payload_t *batch, size_t batch_len)
-{	
-	printf("uploading %d payloads\n", 1);
+{
 	esp_http_client_config_t config = {
 		.url = "http://192.168.1.196:3000/send",
-//		.url = "http://10.207.208.255:3000/send"
 	};
 	esp_http_client_handle_t client = esp_http_client_init(&config);
 
@@ -118,31 +118,52 @@ request_status_t send_ecdsa_public_key(request_ecdsa_payload_t *payload, request
 	return REQUEST_SUCCESS;
 }
 
-esp_err_t get_device_location_event_handler(esp_http_client_event_t *evt)
+esp_err_t get_lost_device_locations_event_handler(esp_http_client_event_t *evt)
 {
-//	request_ecdsa_response_t *response = (request_ecdsa_response_t *)evt->user_data;
+    switch (evt->event_id) {
+      case HTTP_EVENT_ON_DATA: {
+        uint8_t *ptr = (uint8_t *)evt->data;
 
-  switch(evt->event_id) {
-    case HTTP_EVENT_ON_DATA:
-      printf("Received %d bytes", evt->data_len);
-      printf("%.*s\n", evt->data_len, (char*)evt->data);
-			memcpy(device_uuid, evt->data, evt->data_len);
-      break;
+        // Read loc (length-prefixed)
+        uint16_t enc_len = (ptr[0] << 8) | ptr[1];  ptr += 2;
+        uint8_t *enc_location = ptr;                  ptr += enc_len;
 
-    default:
-      break;
-  }
+        // Read finder key (length-prefixed)
+        uint16_t key_len = (ptr[0] << 8) | ptr[1];  ptr += 2;
+        uint8_t *finder_key = ptr;
 
-  return ESP_OK;
+        // Verify sizes
+        printf("enc_loc (%d bytes): ", enc_len);
+        for (int i = 0; i < enc_len; i++) printf("%02x ", enc_location[i]);
+        printf("\n");
+
+        printf("finder_key (%d bytes): ", key_len);
+        for (int i = 0; i < key_len; i++) printf("%02x ", finder_key[i]);
+        printf("\n");
+				
+				crypto_work_item_t item = {
+					.type = CRYPTO_WORKER_DECRYPT_LOC_REPORT
+				};
+				memcpy(item.context.decrypt_loc.enc_loc, enc_location, 24);
+				memcpy(item.context.decrypt_loc.finder_key_raw, finder_key, 32);
+				xQueueSend(crypto_worker_queue, &item, 0);
+
+        break;
+      }
+
+      default:
+          break;
+    }
+
+    return ESP_OK;
 }
 
 
-request_status_t get_all_locations(request_location_for_eph_key *item)
-{
-		printf("attempting to fetch device location\n");
+request_status_t get_all_locations(request_location_for_eph_key_t *item)
+{		
 		esp_http_client_config_t config = {
 			.url = "http://192.168.1.196:3000/fetch_device_locations",
-			.event_handler = get_device_location_event_handler,
+			.event_handler = get_lost_device_locations_event_handler,
 		};
 
 		esp_http_client_handle_t client = esp_http_client_init(&config);
@@ -169,34 +190,107 @@ request_status_t get_all_locations(request_location_for_eph_key *item)
 		return REQUEST_SUCCESS;
 }
 
+#include "cJSON.h"
 
-request_status_t get_device_location_from_bssid(request_device_location_payload_t *payload)
+esp_err_t get_device_location_event_handler(esp_http_client_event_t *evt)
 {
-	printf("Get location \n");
+  switch(evt->event_id) {
+    case HTTP_EVENT_ON_DATA:
+      char *data = malloc(evt->data_len + 1);
+      memcpy(data, evt->data, evt->data_len);
+      data[evt->data_len] = '\0';
+
+			crypto_work_item_t item = {
+				.type = CRYPTO_WORKER_EVENT_LOST_MSG
+			};
+			memcpy(&item.context.lost_msg.mfg, evt->user_data, sizeof(mfg_data_t));
+			item.context.lost_msg.mfg.payload_len = 32;
+			
+      cJSON *json = cJSON_Parse(data);
+      if (json != NULL) {
+        cJSON *lat = cJSON_GetObjectItem(json, "lat");
+        cJSON *lng = cJSON_GetObjectItem(json, "lng");
+
+        if (cJSON_IsNumber(lat) && cJSON_IsNumber(lng)) {
+            printf("Lat: %f, Lng: %f\n", lat->valuedouble, lng->valuedouble);
+						item.context.lost_msg.location[0] = (int32_t)(lat->valuedouble * 1e6);
+						item.context.lost_msg.location[1] = (int32_t)(lng->valuedouble * 1e6);
+						
+						xQueueSend(crypto_worker_queue, &item, 0);
+        }
+        cJSON_Delete(json);
+      }
+
+      free(data);
+      break;
+
+    default:
+        break;
+  }
+
+  return ESP_OK;
+}
+
+#include "esp_wifi.h"
+
+request_status_t get_user_location(request_user_location_t *payload)
+{
 	esp_http_client_config_t config = {
 		.url = "http://192.168.1.196:3000/location",
-//	.url = "http://10.207.218.103:3000/location"
+		.event_handler = get_device_location_event_handler,
+		.user_data = &payload->mfg
+		// pass mfg as user_data, then we can send it to the crypto event
 	};
 
 	esp_http_client_handle_t client = esp_http_client_init(&config);
 
 	esp_http_client_set_method(client, HTTP_METHOD_GET);
 	esp_http_client_set_header(client, "Content-Type", "application/octet-stream");
-
-	my_wifi_ap_record_t record = {
-		.bssid = {0x64, 0xFA, 0x2B, 0x3A, 0x88, 0xD2},
-		.rssi = -66
+	
+	
+	wifi_scan_config_t scan_config = {
+	    .ssid = NULL,
+	    .bssid = NULL,
+	    .channel = 0,
+	    .scan_type = WIFI_SCAN_TYPE_ACTIVE,
 	};
 
-	my_wifi_ap_record_t record2 = {
-		.bssid = {0x8C, 0x9A, 0x8F, 0x08, 0x9B, 0x3E},
-		.rssi = -67
-	};
+	esp_wifi_scan_start(&scan_config, true);
 
-	my_wifi_ap_record_t record3 = {
-		.bssid = {0x3C, 0x6A, 0xD2, 0xE9, 0x54, 0xD2},
-		.rssi = -78
-	};
+	uint16_t num_networks = 0;
+	esp_wifi_scan_get_ap_num(&num_networks);
+	
+	wifi_ap_record_t* networks = (wifi_ap_record_t*)malloc(sizeof(wifi_ap_record_t) * num_networks);
+	esp_wifi_scan_get_ap_records(&num_networks, networks);
+	
+	if (num_networks < 3) {
+	    printf("Not enough networks found for geolocation\n");
+	    free(networks);
+	    return REQUEST_ERR_UNKNOWN;
+	}
+	
+	my_wifi_ap_record_t record, record2, record3;
+	my_wifi_ap_record_t *records[] = {&record, &record2, &record3};
+
+	for (int i = 0; i < 3; i++) {
+	    memcpy(records[i]->bssid, networks[i].bssid, 6);
+	    records[i]->rssi = networks[i].rssi;
+	}
+
+//	my_wifi_ap_record_t record = {
+//		.bssid = {0x64, 0xFA, 0x2B, 0x3A, 0x88, 0xD2},
+//		.rssi = -66
+//	};
+//
+//	my_wifi_ap_record_t record2 = {
+//		.bssid = {0x8C, 0x9A, 0x8F, 0x08, 0x9B, 0x3E},
+//		.rssi = -67
+//	};
+//
+//	my_wifi_ap_record_t record3 = {
+//		.bssid = {0x3C, 0x6A, 0xD2, 0xE9, 0x54, 0xD2},
+//		.rssi = -78
+//	};
 
 	request_device_location_payload_t wire = {
 		.number_aps = 3,
@@ -222,6 +316,8 @@ request_status_t get_device_location_from_bssid(request_device_location_payload_
 	    ESP_LOGE(TAG, "Error perform http request %s", esp_err_to_name(err));
 	}
 	esp_http_client_cleanup(client);
+	
+	free(networks);
 
 	return REQUEST_SUCCESS;
 }

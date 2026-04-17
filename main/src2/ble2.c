@@ -63,20 +63,33 @@ void handle_paired_msg(ble_work_msg_t *msg, mfg_data_t *mfg)
 }
 
 int payloads_received = 0;
+static int count = 0;
 
 
 void handle_lost_msg(ble_work_msg_t *msg, mfg_data_t *mfg)
 {
-	crypto_work_item_t crypto_item = {
-		.type = CRYPTO_WORKER_EVENT_LOST_MSG,
+	/* Call the request get user location */
+	count++;
+	request_work_item_t item = {
+		.type =	REQUEST_WORKER_EVENT_GET_LOCATION,
 	};
-	memcpy(
-		&crypto_item.context.lost_msg.mfg,
-		mfg,
-		sizeof(mfg_data_t)
-	);
+	memcpy(&item.get_user_loc.mfg, mfg, sizeof(mfg_data_t));
 	
-	xQueueSend(crypto_worker_queue, &crypto_item, 0);
+	if (count % 3 == 0)
+	{		
+		xQueueSend(request_worker_queue, &item, 0);
+	}
+	
+//	crypto_work_item_t crypto_item = {
+//		.type = CRYPTO_WORKER_EVENT_LOST_MSG,
+//	};
+//	memcpy(
+//		&crypto_item.context.lost_msg.mfg,
+//		mfg,
+//		sizeof(mfg_data_t)
+//	);
+//	
+//	xQueueSend(crypto_worker_queue, &crypto_item, 0);
 }
 
 /* Event Handlers */
@@ -95,6 +108,13 @@ ble_status_t handle_read_complete(ble_work_read_complete_t *read)
 
   ESP_LOGI(tag, "Received peer public key (%d bytes)", read->data_len);
 	paired = true;
+	
+	printf("received this public key: \n");
+	for (int i = 0; i < read->data_len; i++)
+	{
+		printf("%02X", read->data[i]);
+	}
+	printf("\n");
 
   return BLE_SUCCESS;
 }

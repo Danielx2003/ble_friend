@@ -83,6 +83,7 @@ void register_device()
 		.ecdsa_public_key = &ecdsa_public_key
 	};
 
+	printf("uploading key\n");
 	request_status_t req_status = send_ecdsa_public_key(&payload, &response);
 	if (req_status != REQUEST_SUCCESS) { return; }
 }

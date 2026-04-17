@@ -66,11 +66,9 @@ void ble_worker_task(void *param)
 					handle_ext_disc(&item);
 					break;
 				case BLE_WORKER_EVENT_CONNECT:
-					printf("connectyed to device event\n");
 					handle_on_connect(&(item));
 					break;
 				case BLE_WORKER_EVENT_DISCONNECT:
-					printf("Disconnected from device event\n");
 					handle_on_disconnect(&item.context.disconnect);	
 				break;
 				case BLE_WORKER_EVENT_DISC_COMPLETE:

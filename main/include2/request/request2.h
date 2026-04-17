@@ -56,14 +56,14 @@ Upload finders public key, encrypted lost message
 */
 request_status_t upload_lost_details(request_lost_payload_t *payload);
 
-request_status_t get_device_location_from_bssid(request_device_location_payload_t *payload);
+request_status_t get_user_location(request_user_location_t *payload);
 
 /*
 GET
 Owner requests all location's with the given public key
 Then he can decrypt - which can be done elsewhere(?)
 */
-request_status_t get_all_locations(request_location_for_eph_key *item);
+request_status_t get_all_locations(request_location_for_eph_key_t *item);
 
 request_status_t send_ecdsa_public_key(
 	request_ecdsa_payload_t *payload,

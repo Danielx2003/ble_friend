@@ -310,6 +310,7 @@ crypto_status_t derive_public_key(
 	);
 	
 	public_key->type = KEY_TYPE_RAW;
+	public_key->raw.len = 32;
 	
 	return status;
 }
@@ -515,18 +516,16 @@ crypto_status_t sign_message(
 	);
 	if (status != PSA_SUCCESS) { return psa_status_to_crypto(status); }
 	
-	/* TEMP: VERIFY HASH */
-	
+	/* VERIFY HASH */    
 	status = psa_verify_hash(
-	    ecdsa_public_key.id,
-	    PSA_ALG_ECDSA(PSA_ALG_SHA_256),
-	    hash,
-	    hash_len,
-	    signature,
-	    signature_len
+		ecdsa_public_key.id,
+		PSA_ALG_ECDSA(PSA_ALG_SHA_256),
+		hash,
+		hash_len,
+		signature,
+		signature_len
 	);
 	if (status != PSA_SUCCESS) { printf("invalid hash\n"); return psa_status_to_crypto(status); }
-	printf("valid signige\n");
 
 	return CRYPTO_SUCCESS;
 }

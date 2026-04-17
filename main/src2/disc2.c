@@ -20,7 +20,6 @@ int on_read(uint16_t conn_handle,
                    struct ble_gatt_attr *attr,
                    void *arg)
 {
-	printf("successfully read...\n");
 	crypto_work_item_t item = {
 		.type = CRYPTO_WORKER_EVENT_READ_COMPLETE,
 		.context.read_complete = {
@@ -47,8 +46,6 @@ int on_read(uint16_t conn_handle,
     item.context.read_complete.data_len = len;
   }
 	
-	printf("sending to crypto queue\n");
-
   xQueueSend(crypto_worker_queue, &item, 0);
   return 0;
 }
@@ -245,7 +242,7 @@ ble_status_t disc_start(ble_disc_params_t *params,
 	disc_params.filter_duplicates = 0;
   disc_params.passive = params->passive;
   disc_params.itvl = BLE_GAP_SCAN_ITVL_MS(100);
-	disc_params.window = BLE_GAP_SCAN_WIN_MS(75);
+	disc_params.window = BLE_GAP_SCAN_WIN_MS(35);
 	
 
   rc = ble_hs_id_infer_auto(0, &own_addr_type);

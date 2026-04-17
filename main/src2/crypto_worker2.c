@@ -11,6 +11,74 @@
 
 /* Crypto Worker Task */
 
+static int pass = 0;
+
+void decrypt_loc_report(crypto_work_decrypt_loc_t *item)
+{
+	printf("enc_loc (%d bytes): ", 24);
+	for (int i = 0; i < 24; i++) printf("%02x ", item->enc_loc[i]);
+	printf("\n");
+
+	printf("finder_key (%d bytes): ", 32);
+	for (int i = 0; i < 32; i++) printf("%02x ", item->finder_key_raw[i]);
+	printf("\n");
+	
+	crypto_key_t finder_pub = {
+		.type = KEY_TYPE_RAW
+	};
+	memcpy(finder_pub.raw.data, item->finder_key_raw, 32);
+	finder_pub.raw.len = 32;
+	
+	crypto_key_t eph_priv;
+	const uint8_t info[] = "eph_private";
+
+	crypto_status_t status = derive_ephemeral_private_key(
+		&master_secret,
+		info, sizeof(info),
+		&eph_priv
+	);
+	
+	crypto_key_t owner_shared_secret;
+	
+	status = generate_secret(
+	    &eph_priv,
+	    &finder_pub,
+	    &owner_shared_secret
+	);
+	
+	crypto_key_t owner_aes_key;
+	derive_symmetric_aes_key_hkdf(
+		&owner_shared_secret,
+		NULL, 0,
+		NULL, 0,
+		&owner_aes_key
+	);
+	
+	uint8_t decrypted[128];
+	uint8_t nonce[12] = {0};
+	size_t decrypted_len;
+
+	status = psa_aead_decrypt(
+	    owner_aes_key.id,
+	    PSA_ALG_GCM,
+	    nonce, sizeof(nonce),
+	    NULL, 0,
+	    item->enc_loc, 24,
+	    decrypted, sizeof(decrypted),
+	    &decrypted_len
+	  );
+	if (status != CRYPTO_SUCCESS)
+	{
+		printf("failed to decrypt location report\n");
+		return;
+	}
+
+  int32_t *location = (int32_t *)decrypted;
+  double lat = location[0] / 1e6;
+  double lng = location[1] / 1e6;
+  printf("Lat: %.6f, Lng: %.6f\n", lat, lng);
+}
+
 void handle_lost_msg_crypto(crypto_work_item_t *item)
 {
 	crypto_status_t status;
@@ -42,7 +110,7 @@ void handle_lost_msg_crypto(crypto_work_item_t *item)
 	crypto_key_t secret;
 	
 	status = generate_secret(
-		&finder_keypair, 
+		&finder_keypair,
 		&eph_pub_key,
 		&secret
 	);
@@ -62,18 +130,28 @@ void handle_lost_msg_crypto(crypto_work_item_t *item)
 	// Encrypt location
 
 	uint8_t location_plaintext[] = {0x04, 0x05}; // Replace with a get_location function
-	uint8_t location_enc[128];
+	uint8_t location_enc[PSA_AEAD_ENCRYPT_OUTPUT_SIZE(PSA_KEY_TYPE_AES, PSA_ALG_GCM, sizeof(item->context.lost_msg.location))] = {0};
 	uint8_t nonce[12] = {0};
 	size_t ciphertext_len;
-
+	
+//	status = psa_aead_encrypt(
+//	    aes_key.id,
+//	    PSA_ALG_GCM,
+//	    nonce, sizeof(nonce),
+//	    NULL, 0,
+//	    location_plaintext, sizeof(location_plaintext),
+//	    location_enc, sizeof(location_enc),
+//	    &ciphertext_len
+//	);
+//
 	status = psa_aead_encrypt(
-	  aes_key.id,
-	  PSA_ALG_GCM,
-	  nonce, sizeof(nonce),
-	  NULL, 0,
-	  location_plaintext, sizeof(location_plaintext),
-	  location_enc, sizeof(location_enc),
-	  &ciphertext_len
+	    aes_key.id,
+	    PSA_ALG_GCM,
+	    nonce, sizeof(nonce),
+	    NULL, 0,
+	    (const uint8_t *)item->context.lost_msg.location, sizeof(item->context.lost_msg.location),
+	    location_enc, sizeof(location_enc),
+	    &ciphertext_len
 	);
 	if (status != PSA_SUCCESS) {  return; }
 	
@@ -95,7 +173,7 @@ void handle_lost_msg_crypto(crypto_work_item_t *item)
 	);
 	if (status != CRYPTO_SUCCESS) { return; }
 
-	//	Send Upload Command
+	// Send Upload Command
 	request_lost_payload_t lost_payload;
 	lost_payload.encryption_location_len = ciphertext_len;
 	memcpy(lost_payload.device_id, device_uuid, sizeof(device_uuid));
@@ -114,51 +192,71 @@ void handle_lost_msg_crypto(crypto_work_item_t *item)
 //	/*
 //	Now simulate the owner retrieving and fetching the location
 //	*/
-//	
-//	if (!paired)
-//	{
-//		printf("not paired\n");
-//		psa_destroy_key(aes_key.id);
-//		psa_destroy_key(secret.id);
-//		psa_destroy_key(finder_keypair.id);
-//		return;
-//	}
+	if (!paired)
+	{
+		printf("not paired\n");
+		psa_destroy_key(aes_key.id);
+		psa_destroy_key(secret.id);
+		psa_destroy_key(finder_keypair.id);
+		return;
+	}
+	
+	pass++;
+
+	if (pass % 3 != 0)
+	{
+		return;
+	}
 //
-//	crypto_key_t eph_priv;
-//	const uint8_t info[] = "eph_private";
-//
-//	status = derive_ephemeral_private_key(
-//		&master_secret,
-//		info, sizeof(info),
-//		&eph_priv
-//	);
-//	if (status != CRYPTO_SUCCESS) {
-//		printf("failed to derive eph priv key\n");
-//	}
-//	
-//	// Fetch location and finder key
-//	printf("make API request here\n");
-//	
-//	request_work_item_t request_item_2 = {
-//		.type = REQUEST_WORKER_EVENT_FETCH_LOST_DEVICE_LOCATION
-//	};
-//	request_location_for_eph_key eph_payload;
-//	crypto_key_t derived_eph_pub_key;
-//
-//	status = derive_public_key(
-//	    &master_secret,
-//			&derived_eph_pub_key
-//	);
-//	if (status != CRYPTO_SUCCESS)
-//	{
-//		printf("failed to derive pub key\n");
-//		return;
-//	}
-//	eph_payload.len = 32;
-//	memcpy(eph_payload.eph_pub_key, derived_eph_pub_key.raw.data, derived_eph_pub_key.raw.len);
-//	memcpy(&request_item.get_device_loc, &eph_payload, sizeof(request_location_for_eph_key));
-//
-//	xQueueSend(request_worker_queue, &request_item_2, 0);
+	crypto_key_t eph_priv;
+	const uint8_t info[] = "eph_private";
+
+	status = derive_ephemeral_private_key(
+		&master_secret,
+		info, sizeof(info),
+		&eph_priv
+	);
+	if (status != CRYPTO_SUCCESS) {
+		printf("failed to derive eph priv key\n");
+	}
+	
+	// Fetch location and finder key
+	
+	request_work_item_t request_item_2 = {
+		.type = REQUEST_WORKER_EVENT_FETCH_LOST_DEVICE_LOCATION
+	};
+	request_location_for_eph_key_t eph_payload;
+	crypto_key_t derived_eph_pub_key;
+
+	status = derive_public_key(
+	    &master_secret,
+			&derived_eph_pub_key
+	);
+	if (status != CRYPTO_SUCCESS)
+	{
+		printf("failed to derive pub key\n");
+		return;
+	}
+	
+	printf("broadcast public key: \n");
+	for (int i =0; i<32; i++)
+	{
+		printf("%02X", eph_pub_key.raw.data[i]);
+	}
+	printf("\n");
+	
+	printf("derived public key: \n");
+	for (int i =0; i<32; i++)
+	{
+		printf("%02X",derived_eph_pub_key.raw.data[i]);
+	}
+	printf("\n");
+	
+	eph_payload.len = 32;
+	memcpy(eph_payload.eph_pub_key, derived_eph_pub_key.raw.data, derived_eph_pub_key.raw.len);
+	memcpy(&request_item_2.get_device_loc, &eph_payload, sizeof(eph_payload));
+	
+	xQueueSend(request_worker_queue, &request_item_2, 0);
 
 	psa_destroy_key(aes_key.id);
 	psa_destroy_key(secret.id);
@@ -168,10 +266,11 @@ void handle_lost_msg_crypto(crypto_work_item_t *item)
 void handle_read_complete_crypto(crypto_work_item_t *item)
 {
 	crypto_key_t peer_pub_key = {0};
+	peer_pub_key.type = KEY_TYPE_RAW;
 	memcpy(
 		&peer_pub_key.raw,
-		&item->context.read_complete,
-		sizeof(item->context.read_complete)
+		&item->context.read_complete.data,
+		item->context.read_complete.data_len
 	);
 	peer_pub_key.raw.len = 32;
 	
@@ -179,6 +278,10 @@ void handle_read_complete_crypto(crypto_work_item_t *item)
 	if (status != CRYPTO_SUCCESS)
 	{
 		printf("failed to generate master secret\n");
+	}
+	else
+	{
+		printf("generated master secret \n");
 	}
 	
   ble_work_item_t ble_item;
@@ -218,11 +321,13 @@ void crypto_worker_task(void *param)
   while(1) {
 	  if(xQueueReceive(crypto_worker_queue, &item, portMAX_DELAY)) {
 	    switch(item.type) {
+				case CRYPTO_WORKER_DECRYPT_LOC_REPORT:
+					decrypt_loc_report(&item.context.decrypt_loc);
+					break;
 				case CRYPTO_WORKER_EVENT_LOST_MSG:
 					handle_lost_msg_crypto(&item);
 					break;
 				case CRYPTO_WORKER_EVENT_READ_COMPLETE:
-					printf("crypto queue received event\n");
 					handle_read_complete_crypto(&item);
 					break;
 				default:
