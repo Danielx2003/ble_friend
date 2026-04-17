@@ -3,8 +3,6 @@
 #include "crypto2.h"
 #include "crypto_worker2.h"
 #include "parser2.h"
-#include "crypto2.h"
-#include "request2.h"
 #include "request_worker2.h"
 
 #include "esp_log.h"
@@ -12,7 +10,6 @@
 #include "esp_central.h"
 #include "freertos/idf_additions.h"
 #include <sys/time.h>
-
 #include <stdio.h>
 
 /* Static + Global Variables */
@@ -20,11 +17,11 @@
 static const char *tag = "BLE_2";
 
 static const ble_uuid128_t key_exchange_svr_uuid =
-    BLE_UUID128_INIT(PUB_KEY_SERVICE_UUID);
+  BLE_UUID128_INIT(PUB_KEY_SERVICE_UUID);
 static const ble_uuid128_t pub_key_chr_uuid =
-    BLE_UUID128_INIT(PUB_KEY_CHAR_UUID);
+  BLE_UUID128_INIT(PUB_KEY_CHAR_UUID);
 static const ble_uuid128_t peer_pub_key_chr_uuid =
-    BLE_UUID128_INIT(PEER_PUB_KEY_CHAR_WRITE_UUID);
+  BLE_UUID128_INIT(PEER_PUB_KEY_CHAR_WRITE_UUID);
 
 QueueHandle_t ble_worker_queue = NULL;
 
@@ -33,7 +30,7 @@ QueueHandle_t ble_worker_queue = NULL;
 void ble_store_config_init(void);
 
 /* NimBLE Stack Callbacks */
-									 
+
 void handle_on_sync(void)
 {
   ble_disc_params_t params = {
@@ -47,16 +44,14 @@ void handle_on_sync(void)
   }
 }
 
-
 /* Protocol Message Handlers */
 
 void handle_pairing_msg(ble_work_msg_t *msg, mfg_data_t *mfg)
 {
-	printf("received pairing\n");
+  printf("received pairing\n");
   disc_stop();
   start_connect(msg);
 }
-
 
 void handle_paired_msg(ble_work_msg_t *msg, mfg_data_t *mfg)
 {
@@ -65,31 +60,17 @@ void handle_paired_msg(ble_work_msg_t *msg, mfg_data_t *mfg)
 int payloads_received = 0;
 static int count = 0;
 
-
 void handle_lost_msg(ble_work_msg_t *msg, mfg_data_t *mfg)
 {
-	/* Call the request get user location */
-	count++;
-	request_work_item_t item = {
-		.type =	REQUEST_WORKER_EVENT_GET_LOCATION,
-	};
-	memcpy(&item.get_user_loc.mfg, mfg, sizeof(mfg_data_t));
-	
-	if (count % 3 == 0)
-	{		
-		xQueueSend(request_worker_queue, &item, 0);
-	}
-	
-//	crypto_work_item_t crypto_item = {
-//		.type = CRYPTO_WORKER_EVENT_LOST_MSG,
-//	};
-//	memcpy(
-//		&crypto_item.context.lost_msg.mfg,
-//		mfg,
-//		sizeof(mfg_data_t)
-//	);
-//	
-//	xQueueSend(crypto_worker_queue, &crypto_item, 0);
+  count++;
+  request_work_item_t item = {
+    .type = REQUEST_WORKER_EVENT_GET_LOCATION,
+  };
+  memcpy(&item.get_user_loc.mfg, mfg, sizeof(mfg_data_t));
+
+  if (count % 3 == 0) {
+    xQueueSend(request_worker_queue, &item, 0);
+  }
 }
 
 /* Event Handlers */
@@ -107,38 +88,27 @@ ble_status_t handle_read_complete(ble_work_read_complete_t *read)
   }
 
   ESP_LOGI(tag, "Received peer public key (%d bytes)", read->data_len);
-	paired = true;
-	
-	printf("received this public key: \n");
-	for (int i = 0; i < read->data_len; i++)
-	{
-		printf("%02X", read->data[i]);
-	}
-	printf("\n");
-
+  paired = true;
   return BLE_SUCCESS;
 }
 
 ble_status_t write_key_to_peer(ble_work_write_key_t *item)
 {
-	const struct peer *peer =
-	      peer_find(item->conn_handle);
+  const struct peer *peer = peer_find(item->conn_handle);
 
-  const struct peer_chr *chr =
-      peer_chr_find_uuid(
-          peer,
-          &key_exchange_svr_uuid.u,
-          &peer_pub_key_chr_uuid.u);
+  const struct peer_chr *chr = peer_chr_find_uuid(
+    peer,
+    &key_exchange_svr_uuid.u,
+    &peer_pub_key_chr_uuid.u);
 
   if (chr == NULL) {
     ESP_LOGE(tag, "Peer does not support key write characteristic");
     return BLE_FAIL;
   }
 
-  struct os_mbuf *txom =
-      ble_hs_mbuf_from_flat(
-				item->pub_key,
-				item->pub_key_len);
+  struct os_mbuf *txom = ble_hs_mbuf_from_flat(
+    item->pub_key,
+    item->pub_key_len);
 
   if (!txom) {
     ESP_LOGE(tag, "Insufficient memory to create buffer");
@@ -146,31 +116,24 @@ ble_status_t write_key_to_peer(ble_work_write_key_t *item)
   }
 
   int rc = ble_gattc_write_long(
-      item->conn_handle,
-      chr->chr.val_handle,
-      0,
-      txom,
-      NULL,
-      NULL);
+    item->conn_handle,
+    chr->chr.val_handle,
+    0,
+    txom,
+    NULL,
+    NULL);
 
   if (rc != 0) {
-    ESP_LOGE(tag, "Failed to write characteristic; rc=%d\n", rc);
+    ESP_LOGE(tag, "Failed to write characteristic; rc=%d", rc);
     return BLE_FAIL;
   }
-	
-	for (int i =0; i < txom->om_len; i++)
-	{
-		printf("%02X", txom->om_data[i]);
-	}
-	printf("\n");
-	
-	ESP_LOGE(tag, "Wrote public key to other device\n");
 
-	return BLE_SUCCESS;
+  ESP_LOGI(tag, "Wrote public key to other device");
+
+  return BLE_SUCCESS;
 }
 
 #include "esp_system.h"
-#include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 
@@ -184,30 +147,16 @@ ble_status_t handle_ext_disc(ble_work_item_t *item)
   };
 
   status = parse_adv_data(
-		item->context.msg.data,
-			item->context.msg.len,
-			&result
-	);
+    item->context.msg.data,
+    item->context.msg.len,
+    &result);
 
-	if (status != CRYPTO_SUCCESS) { return status; }
-	
-//	struct timeval now = {0};
-//	gettimeofday(&now, NULL);
-//	int diff = (now.tv_sec - disc_start_time.tv_sec) * 1000 + (now.tv_usec - disc_start_time.tv_sec) / 1000;
-//
-//	printf("TT Disc: %d\n", diff);
-//	
-//	srand(time(NULL));
-//	int random_ms = (rand() % 3000) + 1;	
-//	vTaskDelay(pdMS_TO_TICKS(random_ms));
-//
-//	esp_restart();
-	
+  if (status != CRYPTO_SUCCESS) { return status; }
+
   result.action(&item->context.msg, result.mfg);
-	
+
   return BLE_SUCCESS;
 }
-
 
 ble_status_t handle_disc_complete(ble_work_disc_complete_t *disc)
 {
@@ -224,9 +173,9 @@ ble_status_t handle_disc_complete(ble_work_disc_complete_t *disc)
   }
 
   const struct peer_chr *chr = peer_chr_find_uuid(
-      peer,
-      &key_exchange_svr_uuid.u,
-      &pub_key_chr_uuid.u);
+    peer,
+    &key_exchange_svr_uuid.u,
+    &pub_key_chr_uuid.u);
 
   if (chr == NULL) {
     ESP_LOGE(tag, "Peer does not support pub key characteristic");
@@ -235,10 +184,10 @@ ble_status_t handle_disc_complete(ble_work_disc_complete_t *disc)
   }
 
   int rc = ble_gattc_read(
-      disc->conn_handle,
-      chr->chr.val_handle,
-      on_read,
-      NULL);
+    disc->conn_handle,
+    chr->chr.val_handle,
+    on_read,
+    NULL);
 
   if (rc != 0) {
     ESP_LOGE(tag, "Failed to initiate read rc=%d", rc);
@@ -248,7 +197,6 @@ ble_status_t handle_disc_complete(ble_work_disc_complete_t *disc)
 
   return BLE_SUCCESS;
 }
-
 
 ble_status_t handle_on_connect(ble_work_item_t *item)
 {
@@ -262,17 +210,13 @@ ble_status_t handle_enc_change(ble_work_connect_t *connect)
   return BLE_SUCCESS;
 }
 
-
 ble_status_t handle_on_disconnect(ble_work_disconnect_t *disconnect)
 {
-	int rc = peer_delete(disconnect->conn_handle);
-	if (rc != 0)
-	{
-		ESP_LOGE(tag,
-		         "Failed to delete peer rc=%d",
-		         rc);
-		return 0;
-	}	
+  int rc = peer_delete(disconnect->conn_handle);
+  if (rc != 0) {
+    ESP_LOGE(tag, "Failed to delete peer rc=%d", rc);
+    return 0;
+  }
 
   ble_disc_params_t params = {
     .filter_duplicates = 1,
@@ -288,7 +232,6 @@ ble_status_t handle_on_disconnect(ble_work_disconnect_t *disconnect)
   return BLE_SUCCESS;
 }
 
-
 /* Public API */
 
 ble_status_t ble_init(void)
@@ -298,23 +241,21 @@ ble_status_t ble_init(void)
 
 ble_status_t ble_start(void)
 {
-  ble_worker_queue =
-      xQueueCreate(BLE_QUEUE_LEN, sizeof(ble_work_item_t));
+  ble_worker_queue = xQueueCreate(BLE_QUEUE_LEN, sizeof(ble_work_item_t));
 
   if (!ble_worker_queue) {
     ESP_LOGE(tag, "Failed to create BLE worker queue");
     return BLE_ERR_NO_MEMORY;
   }
-	
-	xTaskCreatePinnedToCore(
+
+  xTaskCreatePinnedToCore(
     ble_worker_task,
     "ble_worker",
     16384,
     NULL,
     20,
     NULL,
-		0
-	);
+    0);
 
   return BLE_SUCCESS;
 }
