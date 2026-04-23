@@ -2,6 +2,7 @@
 #include "crypto2.h"
 #include "device2.h"
 #include "crypto2.h"
+#include "freertos/idf_additions.h"
 #include "parser2.h"
 #include "psa/crypto.h"
 #include "request2.h"
@@ -94,6 +95,15 @@ void app_main()
 	{
 		return;
 	}
+	
+//	vTaskDelay(pdMS_TO_TICKS(7000));
+//	
+//	while (true)
+//	{
+//		printf("{\"lat\": %.6f, \"lon\": %.6f, \"timestamp\": 1776767745, \"device_id\": \"%s\"}\n",
+//		       50.7373056, -3.5326714, device_uuid);
+////		vTaskDelay(pdMS_TO_TICKS(5000));
+//	}
 	
 	request_init();
 //	get_device_location_from_bssid(NULL);

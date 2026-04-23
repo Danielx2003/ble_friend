@@ -65,7 +65,9 @@ void decrypt_loc_report(crypto_work_decrypt_loc_t *item)
   int32_t *location = (int32_t *)decrypted;
   double lat = location[0] / 1e6;
   double lng = location[1] / 1e6;
-  printf("Lat: %.6f, Lng: %.6f\n", lat, lng);
+//  printf("Result: Lat: %.6f, Lng: %.6f\n", lat, lng);
+	printf("{\"lat\": %.6f, \"lon\": %.6f, \"timestamp\": 1776767745, \"device_id\": \"%s\"}\n",
+	       lat, lng, device_uuid);
 }
 
 void handle_lost_msg_crypto(crypto_work_item_t *item)
@@ -236,7 +238,7 @@ void crypto_worker_task(void *param)
   crypto_status_t status;
 
   status = generate_ecdsa_keypair(&ecdsa_private_key);
-  if (status != CRYPTO_SUCCESS) { ESP_LOGE(TAG, "failed to generate keypair!\n"); }
+  if (status != CRYPTO_SUCCESS) { ESP_LOGE(tag, "failed to generate keypair!\n"); }
 
   crypto_work_item_t item;
 

@@ -8,6 +8,8 @@
 #include "esp_log.h"
 #include "esp_http_client.h"
 
+#define SERVER_BASE_URL "http://10.207.208.255:3000"
+
 /* Static + Global Variables */
 
 static const char *tag = "wifi station";
@@ -20,7 +22,7 @@ char device_uuid[36];
 request_status_t upload_lost_batch(request_lost_payload_t *batch, size_t batch_len)
 {
 	esp_http_client_config_t config = {
-		.url = "http://192.168.1.196:3000/send",
+		.url = SERVER_BASE_URL"/send",
 	};
 	esp_http_client_handle_t client = esp_http_client_init(&config);
 
@@ -77,12 +79,11 @@ esp_err_t send_ecdsa_public_key_event_handler(esp_http_client_event_t *evt)
 request_status_t send_ecdsa_public_key(request_ecdsa_payload_t *payload, request_ecdsa_response_t *response)
 {	
 	esp_http_client_config_t config = {
-		.url = "http://192.168.1.196:3000/register",
-//		.url = "http://10.207.208.255:3000/register",
+		.url = SERVER_BASE_URL"/register",
 		.event_handler = send_ecdsa_public_key_event_handler,
 		.user_data = response
 	};
-
+	
 	esp_http_client_handle_t client = esp_http_client_init(&config);
 
 	esp_http_client_set_method(client, HTTP_METHOD_POST);
@@ -152,7 +153,7 @@ esp_err_t get_lost_device_locations_event_handler(esp_http_client_event_t *evt)
 request_status_t get_all_locations(request_location_for_eph_key_t *item)
 {		
 		esp_http_client_config_t config = {
-			.url = "http://192.168.1.196:3000/fetch_device_locations",
+			.url = SERVER_BASE_URL"/fetch_device_locations",
 			.event_handler = get_lost_device_locations_event_handler,
 		};
 
@@ -226,7 +227,7 @@ esp_err_t get_device_location_event_handler(esp_http_client_event_t *evt)
 request_status_t get_user_location(request_user_location_t *payload)
 {
 	esp_http_client_config_t config = {
-		.url = "http://192.168.1.196:3000/location",
+		.url = SERVER_BASE_URL"/location",
 		.event_handler = get_device_location_event_handler,
 		.user_data = &payload->mfg
 		// pass mfg as user_data, then we can send it to the crypto event
