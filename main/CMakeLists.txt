@@ -2,6 +2,6 @@
 #                    INCLUDE_DIRS "." "./include"
 #                    REQUIRES bt nvs_flash mbedtls esp_http_client)
 
-idf_component_register(SRCS "main.c" "src2/ble2.c" "src2/ble_worker2.c" "src2/device2.c" "src2/disc2.c" "src2/parser2.c" "src2/crypto2.c" "src2/request2.c" "src2/request_worker.c" "src2/crypto_worker2.c" "src2/cJSON.c"
-                    INCLUDE_DIRS "." "./include2/ble" "./include2/crypto" "./include2/parser" "./include2/misc" "./include2/request"
+idf_component_register(SRCS "main.c" "src/ble.c" "src/ble_worker.c" "src/device.c" "src/disc.c" "src/parser.c" "src/crypto.c" "src/request.c" "src/request_worker.c" "src/crypto_worker.c" "src/crypto_init" "src/cJSON.c"
+                    INCLUDE_DIRS "." "./include/ble" "./include/crypto" "./include/parser" "./include/misc" "./include/request"
                     REQUIRES bt nvs_flash mbedtls esp_http_client driver)

@@ -1,11 +1,11 @@
 #pragma once
 
-#include "crypto_worker2.h"
+#include "freertos/FreeRTOS.h"
 
-#include "parser2.h"
 #include <stdbool.h>
 #include <stdint.h>
 #include <stddef.h>
+#include "mfg_data.h"
 
 #define CRYPTO_QUEUE_LEN 128
 
@@ -37,6 +37,7 @@ typedef struct {
 typedef struct {
 	uint8_t enc_loc[24];
 	uint8_t finder_key_raw[32];
+	size_t finder_key_size;
 } crypto_work_decrypt_loc_t;
 
 typedef struct {

@@ -54,24 +54,41 @@ typedef struct {
 	size_t message_size;
 } crypto_message_t;
 
+/*
+	Initialise crypto library
+*/
 crypto_status_t crypto_init();
 
+/*
+	Generate keypair for curve
+*/
 crypto_status_t generate_keypair(
   crypto_curve_t curve,
 	crypto_key_t *key
 );
 
+/*
+	Generate ECDH shared secret
+*/
 crypto_status_t generate_secret(
 	crypto_key_t *priv_key,
 	crypto_key_t *pub_key,
 	crypto_key_t *secret
 );
 
+
+/*
+	Derive ephemeral public key from secret
+*/
 crypto_status_t derive_public_key(
 	crypto_key_t *secret,
 	crypto_key_t *public_key
 );
 
+
+/*
+Derive ephemeral private key from secret
+*/
 crypto_status_t derive_ephemeral_private_key(
     crypto_key_t *secret,
     const uint8_t *info,
@@ -79,6 +96,9 @@ crypto_status_t derive_ephemeral_private_key(
     crypto_key_t *private_key
 );
 
+/*
+	Derive AES encryption key from secret
+*/
 crypto_status_t derive_symmetric_aes_key_hkdf(
 	crypto_key_t *secret,
 	uint8_t *salt,
@@ -88,28 +108,42 @@ crypto_status_t derive_symmetric_aes_key_hkdf(
 	crypto_key_t *aes_key
 );
 
+/*
+	Export public key from keypair
+*/
 crypto_status_t export_public_key(
 	crypto_key_t *keypair,
 	crypto_key_t *public_key,
 	size_t public_key_size
 );
 
+/*
+	Generate ECDSA keypair
+*/
 crypto_status_t generate_ecdsa_keypair(
 	crypto_key_t *keypair
 );
 
+/*
+	Export public key from ECDSA keypair
+*/
 crypto_status_t export_ecdsa_public_key(
 	crypto_key_t *keypair,
 	crypto_key_t *public_key
 );
 
+/*
+	Convert raw public key to public key  
+*/
 crypto_status_t import_ecdsa_key(
 	crypto_key_t *public_key,
 	crypto_key_t *key_out
 );
 
+/*
+	Sign message using device ECDSA private key
+*/
 crypto_status_t sign_message(
-//	crypto_key_t *ecdsa_private_key,
 	crypto_message_t *message,
 	uint8_t *signature,
 	size_t signature_len,

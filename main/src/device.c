@@ -1,4 +1,4 @@
-#include "device2.h"
+#include "device.h"
 #include "wifi_password.h"
 
 #include "nvs_flash.h"
@@ -40,17 +40,12 @@ bool device_init()
 	
 	ESP_ERROR_CHECK(esp_netif_init());
 
-  // Create default event loop
   ESP_ERROR_CHECK(esp_event_loop_create_default());
-
-  // Create WiFi station
   esp_netif_create_default_wifi_sta();
 
-  // Initialize WiFi
   wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
   ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 
-  // Register event handler
   ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT,
                                              ESP_EVENT_ANY_ID,
                                              &wifi_event_handler,
@@ -60,19 +55,11 @@ bool device_init()
                                              &wifi_event_handler,
                                              NULL));
 
-  // Configure WiFi
-//  wifi_config_t wifi_config = {
-//      .sta = {
-//          .ssid = WIFI_SSID,
-//          .password = WIFI_PASS,
-//					.threshold.authmode = WIFI_AUTH_WPA2_PSK,
-//      },
-//  };
-	
   wifi_config_t wifi_config = {
       .sta = {
-          .ssid = "University_WiFi",
-					.threshold.authmode = WIFI_AUTH_OPEN,
+          .ssid = WIFI_SSID,
+          .password = WIFI_PASS,
+					.threshold.authmode = WIFI_AUTH_WPA2_PSK,
       },
   };
 
@@ -97,9 +84,8 @@ bool device_init()
 	} else {
 		vEventGroupDelete(s_wifi_event_group);
 	  ESP_LOGE("wifi", "Failed to connect");
-	  return true;
+	  return false;
 	}
-	
   
   return true;
 }

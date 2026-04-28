@@ -1,10 +1,14 @@
-#include "request2.h"
-#include "request_worker2.h"
+#include "request.h"
+#include "request_worker.h"
 
 #define BATCH_TIMEOUT_MS 5000
 
+/* Static Variables */
+
 static request_lost_payload_t lost_batch[MAX_BATCH_ITEMS];
 static size_t batch_count = 0;
+
+/* Request Task */
 
 void request_worker_task(void *param)
 {

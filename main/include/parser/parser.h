@@ -1,9 +1,10 @@
 #pragma once
 
-#include "ble_worker2.h"
 #include <stdbool.h>
 #include <stdint.h>
 #include <stddef.h>
+#include "ble_types.h"
+#include "mfg_data.h"
 
 #define PARSER_SUCCESS ((parser_status_t)0)
 #define PARSER_ERR_COMPANY_ID ((parser_status_t)-1)
@@ -13,30 +14,12 @@
 #define PARSER_ERR_MFG_DATA ((parser_status_t)-5)
 #define PARSER_ERR_MODE ((parser_status_t)-6)
 
-#define PAYLOAD_MAX_SIZE 251
-
-// Protocol
+#define PAYLOAD_MAX_SIZE 255
 #define PROTOCOL_HEADER_SIZE 4
-
-// Adv Data
 #define MIN_ADV_DATA_LEN 3
 
 // Unsure
 #define COMPANY_ID 0xFFFF
-
-typedef enum {
-  PARSER_PAIRING_MSG,
-  PARSER_PAIRED_MSG,
-  PARSER_LOST_MSG
-} parser_msg_t;
-
-typedef struct {
-  uint16_t company_id;
-  uint8_t version_mode;
-  uint8_t flags;
-  uint8_t payload_len;
-  uint8_t payload[PAYLOAD_MAX_SIZE];
-} mfg_data_t;
 
 typedef void (*parser_action_fn)(ble_work_msg_t *msg, mfg_data_t *mfg);
 
@@ -61,7 +44,22 @@ parser_status_t parse_adv_data_fast(
     size_t adv_len,
     parser_result_t* out);
 	
+/*
+	Parse raw advertising data payload
+*/
 parser_status_t parse_adv_data(const uint8_t* adv_data, size_t adv_data_len, parser_result_t* out_result);
+
+/*
+	Extract manufacturer data from advertising payload
+*/
 parser_status_t extract_mfg_data(const uint8_t* adv_data, size_t adv_data_len, mfg_data_t* out);
+
+/*
+	Validate manufacturer data
+*/
 parser_status_t parse_mfg_data(mfg_data_t* mfg, parser_result_t* out_result);
+
+/*
+	Invokes appropriate message handler for payload protocol
+*/
 parser_status_t parse_protocol_msg(parser_msg_t type, parser_result_t* out_result);

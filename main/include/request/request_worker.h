@@ -1,8 +1,7 @@
 #pragma once
 
+#include "mfg_data.h"
 #include "freertos/FreeRTOS.h"
-#include "crypto2.h"
-#include "parser2.h"
 
 #define REQUEST_QUEUE_LEN 32
 

@@ -1,17 +1,16 @@
-#include "ble_worker2.h"
-#include "crypto2.h"
-#include "crypto_worker2.h"
+#include "ble_worker.h"
+#include "ble_types.h"
+#include "crypto.h"
+#include "crypto_worker.h"
+#include "request.h"
+
 #include "freertos/idf_additions.h"
 #include "psa/crypto_values.h"
-#include "request2.h"
-
 #include "esp_log.h"
-#include "request_worker2.h"
 #include <stddef.h>
 
 /* Crypto Worker Task */
 
-static int pass = 0;
 static const char *tag = "CRYPTO";
 
 void decrypt_loc_report(crypto_work_decrypt_loc_t *item)
@@ -19,8 +18,15 @@ void decrypt_loc_report(crypto_work_decrypt_loc_t *item)
   crypto_key_t finder_pub = {
     .type = KEY_TYPE_RAW
   };
-  memcpy(finder_pub.raw.data, item->finder_key_raw, 32);
-  finder_pub.raw.len = 32;
+  memcpy(finder_pub.raw.data, item->finder_key_raw, item->finder_key_size);
+  finder_pub.raw.len = item->finder_key_size;
+	
+	printf("downloaded finder key:\n");
+	for (int i = 0; i < finder_pub.raw.len; i++)
+	{
+		printf("%02X", finder_pub.raw.data[i]);
+	}
+	printf("\n");
 
   crypto_key_t eph_priv;
   const uint8_t info[] = "eph_private";
@@ -60,27 +66,34 @@ void decrypt_loc_report(crypto_work_decrypt_loc_t *item)
   if (status != CRYPTO_SUCCESS) {
     ESP_LOGE(tag, "failed to decrypt location report\n");
     return;
-  }
-
-  int32_t *location = (int32_t *)decrypted;
-  double lat = location[0] / 1e6;
-  double lng = location[1] / 1e6;
-//  printf("Result: Lat: %.6f, Lng: %.6f\n", lat, lng);
-	printf("{\"lat\": %.6f, \"lon\": %.6f, \"timestamp\": 1776767745, \"device_id\": \"%s\"}\n",
-	       lat, lng, device_uuid);
+  } else
+	{
+		int32_t *location = (int32_t *)decrypted;
+		double lat = location[0] / 1e6;
+		double lng = location[1] / 1e6;
+		printf("{\"lat\": %.6f, \"lon\": %.6f, \"timestamp\": 1776767745, \"device_id\": \"abc\"}\n",
+		       lat, lng);
+	}		 
 }
+
+/* Message Handlers */
+
+static int pass = 0;
 
 void handle_lost_msg_crypto(crypto_work_item_t *item)
 {
   crypto_status_t status;
   crypto_key_t finder_keypair;
-
-  status = generate_keypair(CRYPTO_CURVE_X25519, &finder_keypair);
+		
+	crypto_curve_t curve = (crypto_curve_t)(item->context.lost_msg.mfg.version_mode >> 4);
+	
+  status = generate_keypair(curve, &finder_keypair);
   if (status != CRYPTO_SUCCESS) { return; }
-
+	
   crypto_key_t finder_public_key;
-  status = export_public_key(&finder_keypair, &finder_public_key, 32);
+  status = export_public_key(&finder_keypair, &finder_public_key, item->context.lost_msg.mfg.payload_len);
   if (status != CRYPTO_SUCCESS) { return; }
+	
 
   crypto_key_t eph_pub_key = {
     .type = KEY_TYPE_RAW,
@@ -101,7 +114,7 @@ void handle_lost_msg_crypto(crypto_work_item_t *item)
   crypto_key_t aes_key;
   status = derive_symmetric_aes_key_hkdf(&secret, NULL, 0, NULL, 0, &aes_key);
   if (status != CRYPTO_SUCCESS) { return; }
-
+	
   uint8_t location_enc[PSA_AEAD_ENCRYPT_OUTPUT_SIZE(
     PSA_KEY_TYPE_AES,
     PSA_ALG_GCM,
@@ -120,7 +133,7 @@ void handle_lost_msg_crypto(crypto_work_item_t *item)
     &ciphertext_len);
 
   if (status != PSA_SUCCESS) { return; }
-
+	
   crypto_message_t msg = {
     .message = location_enc,
     .message_size = ciphertext_len
@@ -130,8 +143,8 @@ void handle_lost_msg_crypto(crypto_work_item_t *item)
   size_t signature_size;
 
   status = sign_message(&msg, signature, 64, &signature_size);
-  if (status != CRYPTO_SUCCESS) { return; }
-
+  if (status != CRYPTO_SUCCESS) { printf("sign message failed\n"); return; }
+	
   request_lost_payload_t lost_payload;
   lost_payload.encryption_location_len = ciphertext_len;
   memcpy(lost_payload.device_id, device_uuid, sizeof(device_uuid));
@@ -139,7 +152,16 @@ void handle_lost_msg_crypto(crypto_work_item_t *item)
   memcpy(&lost_payload.finder_key_raw, &finder_public_key.raw.data, finder_public_key.raw.len);
   memcpy(&lost_payload.lost_eph_pub_key_raw, &eph_pub_key.raw.data, eph_pub_key.raw.len);
   memcpy(lost_payload.signature, signature, signature_size);
+	
+	printf("uploaded key:\n");
+	for (int i = 0; i < 32; i++)
+	{
+		printf("%02X", lost_payload.finder_key_raw[i]);
+	}
+	printf("\n");
 
+
+	printf("sign and upload lost location\n");
   request_work_item_t request_item = {
     .type = REQUEST_WORKER_EVENT_UPLOAD_LOST_LOCATION
   };
@@ -147,7 +169,8 @@ void handle_lost_msg_crypto(crypto_work_item_t *item)
 
   xQueueSend(request_worker_queue, &request_item, 0);
 
-  if (!paired) {
+	if (!paired) {
+		printf("not paired\n");
     psa_destroy_key(aes_key.id);
     psa_destroy_key(secret.id);
     psa_destroy_key(finder_keypair.id);
@@ -233,12 +256,14 @@ void handle_read_complete_crypto(crypto_work_item_t *item)
   }
 }
 
+/* Crypto Task */
+
 void crypto_worker_task(void *param)
 {
   crypto_status_t status;
 
-  status = generate_ecdsa_keypair(&ecdsa_private_key);
-  if (status != CRYPTO_SUCCESS) { ESP_LOGE(tag, "failed to generate keypair!\n"); }
+//  status = generate_ecdsa_keypair(&ecdsa_private_key);
+//  if (status != CRYPTO_SUCCESS) { ESP_LOGE(tag, "failed to generate keypair!\n"); }
 
   crypto_work_item_t item;
 
@@ -260,3 +285,4 @@ void crypto_worker_task(void *param)
     }
   }
 }
+

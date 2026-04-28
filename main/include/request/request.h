@@ -1,8 +1,7 @@
 #pragma once
 
-#include "request_worker2.h"
-
-#include "crypto2.h"
+#include "crypto.h"
+#include "request_worker.h"
 
 #define MAX_BATCH_ITEMS 20
 
@@ -25,7 +24,6 @@ typedef struct {
 	uint8_t location[2];
 	uint8_t signature[64];
 	uint8_t public_key[32];
-//	size_t public_key_len;
 } request_lost_wire_t;
 
 typedef struct {
@@ -51,25 +49,24 @@ typedef struct {
 request_status_t upload_lost_batch(request_lost_payload_t *batch, size_t batch_len);
 
 /*
-POST
-Upload finders public key, encrypted lost message
+	Upload (finders public key, encrypted lost message) tuple
 */
 request_status_t upload_lost_details(request_lost_payload_t *payload);
 
 request_status_t get_user_location(request_user_location_t *payload);
 
 /*
-GET
-Owner requests all location's with the given public key
-Then he can decrypt - which can be done elsewhere(?)
+
+	Owner requests all location's with the given ephemeral public key
 */
 request_status_t get_all_locations(request_location_for_eph_key_t *item);
 
-request_status_t send_ecdsa_public_key(
-	request_ecdsa_payload_t *payload,
-	request_ecdsa_response_t *response);
+/*
+	Register device to server through its ECDSA public key
+*/
+request_status_t send_ecdsa_public_key(request_ecdsa_payload_t *payload, request_ecdsa_response_t *response);
 
 /*
-Start Request Task/Qeueue
+	Start Request Task/Qeueue
 */
 request_status_t request_init();

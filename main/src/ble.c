@@ -1,10 +1,9 @@
-#include "ble2.h"
-#include "ble_worker2.h"
-#include "crypto2.h"
-#include "crypto_worker2.h"
-#include "parser2.h"
-#include "request_worker2.h"
+#include "ble.h"
+#include "crypto.h"
+#include "parser.h"
+#include "request_worker.h"
 
+#include "esp_sleep.h"
 #include "esp_log.h"
 #include "host/ble_gap.h"
 #include "esp_central.h"
@@ -48,6 +47,7 @@ void handle_on_sync(void)
 
 void handle_pairing_msg(ble_work_msg_t *msg, mfg_data_t *mfg)
 {
+	printf("pairing message\n");
   disc_stop();
   start_connect(msg);
 }
@@ -56,20 +56,15 @@ void handle_paired_msg(ble_work_msg_t *msg, mfg_data_t *mfg)
 {
 }
 
-int payloads_received = 0;
-static int count = 0;
-
 void handle_lost_msg(ble_work_msg_t *msg, mfg_data_t *mfg)
 {
-  count++;
+	printf("lost message\n");
   request_work_item_t item = {
     .type = REQUEST_WORKER_EVENT_GET_LOCATION,
   };
   memcpy(&item.get_user_loc.mfg, mfg, sizeof(mfg_data_t));
 
-  if (count % 3 == 0) {
-    xQueueSend(request_worker_queue, &item, 0);
-  }
+  xQueueSend(request_worker_queue, &item, 0);
 }
 
 /* Event Handlers */
@@ -131,10 +126,6 @@ ble_status_t write_key_to_peer(ble_work_write_key_t *item)
 
   return BLE_SUCCESS;
 }
-
-#include "esp_system.h"
-#include <stdlib.h>
-#include <time.h>
 
 ble_status_t handle_ext_disc(ble_work_item_t *item)
 {
@@ -218,7 +209,7 @@ ble_status_t handle_on_disconnect(ble_work_disconnect_t *disconnect)
   }
 
   ble_disc_params_t params = {
-    .filter_duplicates = 1,
+    .filter_duplicates = 0,
     .passive = 1,
   };
 
@@ -232,11 +223,6 @@ ble_status_t handle_on_disconnect(ble_work_disconnect_t *disconnect)
 }
 
 /* Public API */
-
-ble_status_t ble_init(void)
-{
-  return BLE_SUCCESS;
-}
 
 ble_status_t ble_start(void)
 {

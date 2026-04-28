@@ -4,6 +4,7 @@
 #include "ble_callbacks.h"
 #include "parser.h"
 #include "ble.h"
+#include "mfg_data.h"
 
 #include <stdio.h>
 #include <string.h>

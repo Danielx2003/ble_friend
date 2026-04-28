@@ -1,7 +1,7 @@
+#include "crypto.h"
+
 #include "psa/crypto_values.h"
 #include "unity.h"
-#include "crypto2.h"
-
 #include "psa/crypto.h"
 
 #include <string.h>
@@ -27,6 +27,9 @@ void test_generate_keypair_X25519()
 		CRYPTO_CURVE_X25519,
 		&key
 	);
+	
+	crypto_key_t pub;
+	export_public_key(&key, &pub, 32);
  
   TEST_ASSERT_TRUE(status == CRYPTO_SUCCESS);
 }
@@ -157,36 +160,46 @@ void test_convert_from_id_to_raw_with_raw_key()
 
 void test_derive_public_key_from_secret()
 {
-	crypto_key_t priv_key;
-	crypto_key_t pub_key;
+	for (int i = 0; i < 2; i++)
+	{
+		crypto_key_t priv_key;
+		crypto_key_t pub_key;
 
-	crypto_status_t status =  generate_keypair(
-		CRYPTO_CURVE_X25519,
-		&priv_key
-	 );
+		crypto_status_t status =  generate_keypair(
+			CRYPTO_CURVE_X25519,
+			&priv_key
+		 );
 
-	 TEST_ASSERT_TRUE(status == CRYPTO_SUCCESS);
-	 
-	 status =  generate_keypair(
-	 	CRYPTO_CURVE_X25519,
-	 	&pub_key
-	  );
+		 TEST_ASSERT_TRUE(status == CRYPTO_SUCCESS);
+		 
+		 status =  generate_keypair(
+		 	CRYPTO_CURVE_X25519,
+		 	&pub_key
+		  );
 
-	  TEST_ASSERT_TRUE(status == CRYPTO_SUCCESS);
+		  TEST_ASSERT_TRUE(status == CRYPTO_SUCCESS);
 
-	crypto_key_t secret;
+		crypto_key_t secret;
+			
+		status = generate_secret(
+			&priv_key,
+			&pub_key,
+			&secret
+		);
+		TEST_ASSERT_TRUE(status == CRYPTO_SUCCESS);
+
+		crypto_key_t eph_pub_key;
+
+		status = derive_public_key(&secret, &eph_pub_key);
 		
-	status = generate_secret(
-		&priv_key,
-		&pub_key,
-		&secret
-	);
-	TEST_ASSERT_TRUE(status == CRYPTO_SUCCESS);
-	
-	crypto_key_t eph_pub_key;
-	
-	status = derive_public_key(&secret, &eph_pub_key);
-	TEST_ASSERT_TRUE(status == CRYPTO_SUCCESS);
+		for (int i = 0; i < 32; i++)
+		{
+			printf("%02X", eph_pub_key.raw.data[i]);
+		}
+		printf("\n");
+		
+		TEST_ASSERT_TRUE(status == CRYPTO_SUCCESS);
+	}
 }
 
 
@@ -308,8 +321,8 @@ void test_enc_roundtrip()
 	crypto_key_t owner_aes_key;
 	TEST_ASSERT_TRUE(derive_symmetric_aes_key_hkdf(
 		&owner_shared_secret,
-		NULL,
-		NULL,
+		NULL, 0,
+		NULL, 0,
 		&owner_aes_key
 	) == CRYPTO_SUCCESS);
 	
@@ -490,6 +503,6 @@ int main()
 }
 
 /*
-gcc -o ../../../build/crypto test_crypto.c -I../../include/ -I../../../../../Unity/src/ ../../../../../Unity/src/unity.c ../../src/crypto.c -lmbedtls -lmbedcrypto
+gcc -o ../../../build/crypto test_crypto.c -I../../include2/crypto -I../../include2/misc/ -I./mock ../../src2/crypto2.c  -I../../../../../Unity/src/ ../../../../../Unity/src/unity.c -lmbedtls -lmbedcrypto
 */
 

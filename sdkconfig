@@ -595,10 +595,15 @@ CONFIG_PARTITION_TABLE_MD5=y
 # end of Partition Table
 
 #
-# Example Configuration
+# Accessory Configuration
 #
+CONFIG_DISC_DUTY_CYCLE=5
+CONFIG_WIFI_SSID="VM0025458"
+CONFIG_WIFI_PASS="tWuseGrpu7j8gxde"
 CONFIG_EXAMPLE_EXTENDED_ADV=y
-# end of Example Configuration
+CONFIG_ECC_CURVE_25519=y
+# CONFIG_ECC_CURVE_NIST_P_256 is not set
+# end of Accessory Configuration
 
 #
 # Compiler options

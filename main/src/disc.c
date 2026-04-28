@@ -1,7 +1,6 @@
-#include "ble2.h"
+#include "ble.h"
+#include "crypto_worker.h"
 
-#include "ble_worker2.h"
-#include "crypto_worker2.h"
 #include "host/ble_hs.h"
 #include "host/ble_gap.h"
 #include "host/util/util.h"
@@ -131,8 +130,6 @@ int disc_cb(struct ble_gap_event *event, void *arg)
 			break;
 
 		case BLE_GAP_EVENT_DISC_COMPLETE:
-//			printf("discovery complete\n");
-//			printf("Total Payloads: %d\n", payloads_received);
 			break;
     default:
       break;
@@ -180,11 +177,13 @@ ble_status_t handle_new_connection(ble_work_connect_t *connect)
   if (ble_gattc_exchange_mtu(conn, NULL, NULL) != 0)
 	{
 		ESP_LOGE(tag, "failed to exchange MTU");
+		return BLE_ERR_MTU_EXCHANGE;
 	}
   
 	if (ble_gap_security_initiate(conn) != 0)
 	{
 		ESP_LOGE(tag, "failed to upgrade connection");
+		return BLE_ERR_UPGRADE_CONN;
 	}
 
   return BLE_SUCCESS;
@@ -203,7 +202,7 @@ ble_status_t start_connect(ble_work_msg_t *msg)
 
 	rc = ble_gap_connect(
 	  own_addr_type,
-	  &(msg->pairing.addr),
+	  (ble_addr_t *)&(msg->pairing.addr),
 	  30000,
 	  NULL,
 	  disc_cb,
@@ -231,11 +230,10 @@ ble_status_t disc_start(ble_disc_params_t *params,
   struct ble_gap_disc_params disc_params;
   memset(&disc_params, 0, sizeof(disc_params));
 
-//  disc_params.filter_duplicates = params->filter_duplicates;
-	disc_params.filter_duplicates = 0;
+  disc_params.filter_duplicates = params->filter_duplicates;
   disc_params.passive = params->passive;
   disc_params.itvl = BLE_GAP_SCAN_ITVL_MS(100);
-	disc_params.window = BLE_GAP_SCAN_WIN_MS(35);
+	disc_params.window = BLE_GAP_SCAN_WIN_MS(75);
 	
 
   rc = ble_hs_id_infer_auto(0, &own_addr_type);
@@ -250,7 +248,7 @@ ble_status_t disc_start(ble_disc_params_t *params,
   duration = (duration == 0) ? BLE_HS_FOREVER : duration;
 
   rc = ble_gap_disc(own_addr_type,
-                    BLE_HS_FOREVER, // 2 mins = 120000, 1 min = 60000
+                    BLE_HS_FOREVER,
                     &disc_params,
                     disc_cb,
                     NULL);

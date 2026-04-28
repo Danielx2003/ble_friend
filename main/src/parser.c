@@ -1,4 +1,4 @@
-#include "parser2.h"
+#include "parser.h"
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -6,7 +6,10 @@
 #include <string.h>
 #include <stddef.h>
 
+/* Static */
 static parser_action_table_t *g_actions;
+
+/* Public API */
 
 parser_status_t parse_adv_data(const uint8_t* adv_data, size_t adv_data_len, parser_result_t *out_result)
 {
@@ -37,17 +40,13 @@ parser_status_t extract_mfg_data(const uint8_t* adv_data, size_t adv_data_len, m
     }
 
     if (type == 0xFF) {
-      if (field_len < PROTOCOL_HEADER_SIZE) {
+      if (field_len-2 < PROTOCOL_HEADER_SIZE) {
         return PARSER_ERR_PROTOCOL_HEADER;
       }
 
       out->company_id = adv_data[i] | (adv_data[i + 1] << 8);
       out->version_mode = adv_data[i + 2];
       out->flags = adv_data[i + 3];
-
-      if (field_len <= PROTOCOL_HEADER_SIZE) {
-        return PARSER_ERR_MFG_DATA;
-      }
 
       memcpy(out->payload, &adv_data[i + 4], field_len - 5);
       out->payload_len = field_len - 5;
@@ -57,7 +56,6 @@ parser_status_t extract_mfg_data(const uint8_t* adv_data, size_t adv_data_len, m
 
     i += field_len - 1;
   }
-
   return PARSER_ERR_MFG_DATA;
 }
 

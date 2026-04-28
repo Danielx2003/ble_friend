@@ -1,12 +1,51 @@
 #pragma once
 
-#include "nimble/ble.h"
 #include <stdint.h>
 #include <stddef.h>
 
-#define BLE_QUEUE_LEN 128
+/* BLE */
 
-extern QueueHandle_t ble_worker_queue;
+typedef enum {
+	BLE_SUCCESS,
+	BLE_ERR_NO_MEMORY,
+	BLE_ERR_MTU_EXCHANGE,
+	BLE_ERR_UPGRADE_CONN,
+	BLE_FAIL
+} ble_status_t;
+
+typedef struct {
+	int reason;
+} ble_event_reset_t;
+
+typedef struct {
+  void (*on_ready)(void);
+  void (*on_reset)(ble_event_reset_t* reset);
+} ble_callbacks_t;
+
+typedef enum {
+	BLE_DISCONNECT_EVENT,
+	BLE_CONNECT_EVENT,
+	BLE_EXT_DISC_EVENT
+} ble_event_t;
+
+typedef struct {
+	void (*on_connect)(void* ctx);
+	void (*on_disconnect)(void* ctx);
+	void (*on_ext_disc)(void* ctx);
+} ble_event_cbs_t;
+
+typedef struct {
+  uint8_t filter_duplicates:1;
+  uint8_t passive:1;
+  uint16_t interval;
+} ble_disc_params_t;
+
+/* BLE Worker */
+
+typedef struct {
+  uint8_t type;
+  uint8_t val[6];
+} ble_addr_local_t;
 
 typedef enum {
 	BLE_WORKER_EVENT_CONNECT,
@@ -27,7 +66,7 @@ typedef struct {
 } ble_work_write_key_t;
 
 typedef struct {
-	ble_addr_t addr;
+	ble_addr_local_t addr;
 } ble_work_pairing_msg_t;
 
 typedef struct {
@@ -75,7 +114,3 @@ typedef struct {
 		ble_work_write_key_t write_pub_key;
 	} context;
 } ble_work_item_t;
-
-
-void ble_worker_task(void *param);
-

@@ -1,14 +1,14 @@
-#include "request2.h"
-#include "crypto2.h"
-#include "crypto_worker2.h"
-#include "freertos/idf_additions.h"
-#include "parser2.h"
-#include "request_worker2.h"
+#include "crypto_worker.h"
+#include "request.h"
+#include "request_worker.h"
 
-#include "esp_log.h"
+#include "cJSON.h"
 #include "esp_http_client.h"
+#include "esp_log.h"
+#include "esp_wifi.h"
+#include "freertos/idf_additions.h"
 
-#define SERVER_BASE_URL "http://10.207.208.255:3000"
+#define SERVER_BASE_URL "http://192.168.0.172:3000"
 
 /* Static + Global Variables */
 
@@ -39,7 +39,7 @@ request_status_t upload_lost_batch(request_lost_payload_t *batch, size_t batch_l
 	esp_http_client_set_post_field(
 		client,
 		(char *)&data,
-		sizeof(size_t) + sizeof(request_lost_payload_t) * 1 // 1 was batch_len
+		sizeof(size_t) + sizeof(request_lost_payload_t) * 1
 	);
 
 	esp_err_t err = esp_http_client_perform(client);
@@ -56,11 +56,8 @@ request_status_t upload_lost_batch(request_lost_payload_t *batch, size_t batch_l
 	return REQUEST_SUCCESS;
 }
 
-
 esp_err_t send_ecdsa_public_key_event_handler(esp_http_client_event_t *evt)
 {
-//	request_ecdsa_response_t *response = (request_ecdsa_response_t *)evt->user_data;
-
   switch(evt->event_id) {
     case HTTP_EVENT_ON_DATA:
       ESP_LOGE(tag, "Received %d bytes", evt->data_len);
@@ -74,7 +71,6 @@ esp_err_t send_ecdsa_public_key_event_handler(esp_http_client_event_t *evt)
 
   return ESP_OK;
 }
-
 
 request_status_t send_ecdsa_public_key(request_ecdsa_payload_t *payload, request_ecdsa_response_t *response)
 {	
@@ -124,11 +120,9 @@ esp_err_t get_lost_device_locations_event_handler(esp_http_client_event_t *evt)
       case HTTP_EVENT_ON_DATA: {
         uint8_t *ptr = (uint8_t *)evt->data;
 
-        // Read loc (length-prefixed)
         uint16_t enc_len = (ptr[0] << 8) | ptr[1];  ptr += 2;
         uint8_t *enc_location = ptr;                  ptr += enc_len;
 
-        // Read finder key (length-prefixed)
         uint16_t key_len = (ptr[0] << 8) | ptr[1];  ptr += 2;
         uint8_t *finder_key = ptr;
 				
@@ -137,6 +131,7 @@ esp_err_t get_lost_device_locations_event_handler(esp_http_client_event_t *evt)
 				};
 				memcpy(item.context.decrypt_loc.enc_loc, enc_location, 24);
 				memcpy(item.context.decrypt_loc.finder_key_raw, finder_key, 32);
+				item.context.decrypt_loc.finder_key_size = 32;	
 				xQueueSend(crypto_worker_queue, &item, 0);
 
         break;
@@ -148,7 +143,6 @@ esp_err_t get_lost_device_locations_event_handler(esp_http_client_event_t *evt)
 
     return ESP_OK;
 }
-
 
 request_status_t get_all_locations(request_location_for_eph_key_t *item)
 {		
@@ -180,8 +174,6 @@ request_status_t get_all_locations(request_location_for_eph_key_t *item)
 
 		return REQUEST_SUCCESS;
 }
-
-#include "cJSON.h"
 
 esp_err_t get_device_location_event_handler(esp_http_client_event_t *evt)
 {
@@ -222,15 +214,12 @@ esp_err_t get_device_location_event_handler(esp_http_client_event_t *evt)
   return ESP_OK;
 }
 
-#include "esp_wifi.h"
-
 request_status_t get_user_location(request_user_location_t *payload)
 {
 	esp_http_client_config_t config = {
 		.url = SERVER_BASE_URL"/location",
 		.event_handler = get_device_location_event_handler,
 		.user_data = &payload->mfg
-		// pass mfg as user_data, then we can send it to the crypto event
 	};
 
 	esp_http_client_handle_t client = esp_http_client_init(&config);
@@ -297,6 +286,8 @@ request_status_t get_user_location(request_user_location_t *payload)
 
 	return REQUEST_SUCCESS;
 }
+
+/* Initialise Request Task */
 
 request_status_t request_init()
 {
